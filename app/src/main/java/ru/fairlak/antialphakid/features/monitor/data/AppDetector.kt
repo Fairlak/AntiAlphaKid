@@ -22,6 +22,6 @@ class AppDetector(private val context: Context) {
             }
         }
 
-        return lastPackageName ?: "Idle"
+        return lastPackageName
     }
 }

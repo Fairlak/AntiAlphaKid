@@ -49,9 +49,16 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.Center
                     ) {
                         Button(onClick = {
-                            // Открываем настройки доступа к статистике
                             val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                             startActivity(intent)
+
+                            if (!Settings.canDrawOverlays(this@MainActivity)) {
+                                val intentOverlay = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    android.net.Uri.parse("package:$packageName")
+                                )
+                                startActivity(intentOverlay)
+                            }
                         }) {
                             Text(text = "Дать доступ к статистике")
                         }

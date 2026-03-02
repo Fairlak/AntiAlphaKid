@@ -8,20 +8,24 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import ru.fairlak.antialphakid.features.blocker.BlockerManager
 import ru.fairlak.antialphakid.features.monitor.data.AppDetector
 
 class MonitoringService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private lateinit var detector: AppDetector
+    private lateinit var blockerManager: BlockerManager
     private val CHANNEL_ID = "monitoring_channel"
 
     override fun onCreate() {
         super.onCreate()
         detector = AppDetector(this)
+        blockerManager = BlockerManager(this)
 
         createNotificationChannel()
         val notification = createNotification()
@@ -31,11 +35,17 @@ class MonitoringService : Service() {
     }
 
     private fun startMonitoring() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         serviceScope.launch {
             while (isActive) {
-                val currentApp = detector.getForegroundApp()
-                Log.d("AntiAlphaDebug", "Сейчас на экране: $currentApp")
-                delay(1000)
+                if (powerManager.isInteractive) {
+                    val currentApp = detector.getForegroundApp()
+                    withContext(Dispatchers.Main) {
+                        blockerManager.checkAndBlock(currentApp)
+                    }
+                    Log.d("AntiAlphaDebug", "Сейчас на экране: $currentApp")
+                    delay(2000)
+                }
             }
         }
     }
