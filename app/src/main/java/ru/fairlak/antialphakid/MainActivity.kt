@@ -49,18 +49,13 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.Center
                     ) {
                         Button(onClick = {
-                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                            startActivity(intent)
+                            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 
-                            if (!Settings.canDrawOverlays(this@MainActivity)) {
-                                val intentOverlay = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    android.net.Uri.parse("package:$packageName")
-                                )
-                                startActivity(intentOverlay)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
+                                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
                             }
                         }) {
-                            Text(text = "Дать доступ к статистике")
+                            Text(text = "Дать все разрешения")
                         }
                     }
                 }

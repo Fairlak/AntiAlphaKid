@@ -17,10 +17,11 @@ import ru.fairlak.antialphakid.features.monitor.data.AppDetector
 
 class MonitoringService : Service() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private lateinit var detector: AppDetector
     private lateinit var blockerManager: BlockerManager
     private val CHANNEL_ID = "monitoring_channel"
+
 
     override fun onCreate() {
         super.onCreate()
@@ -36,16 +37,23 @@ class MonitoringService : Service() {
 
     private fun startMonitoring() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+
+        val trackedPackages = listOf(
+            "com.zhiliaoapp.musically",
+            "com.google.android.youtube"
+        )
+
         serviceScope.launch {
             while (isActive) {
-                if (powerManager.isInteractive) {
-                    val currentApp = detector.getForegroundApp()
-                    withContext(Dispatchers.Main) {
-                        blockerManager.checkAndBlock(currentApp)
+                try {
+                    if (powerManager.isInteractive) {
+                        val statsMap = detector.getTodayStatsForPackages(trackedPackages)
+                        Log.d("AntiAlphaDebug", "Статистика: $statsMap")
                     }
-                    Log.d("AntiAlphaDebug", "Сейчас на экране: $currentApp")
-                    delay(2000)
+                } catch (e: Exception) {
+                    Log.e("AntiAlphaDebug", "Ошибка: ${e.message}")
                 }
+                delay(5000)
             }
         }
     }
