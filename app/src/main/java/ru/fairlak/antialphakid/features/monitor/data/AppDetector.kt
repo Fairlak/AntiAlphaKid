@@ -8,7 +8,7 @@ class AppDetector(private val context: Context) {
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
 
-    fun getTodayStatsForPackages(packages: List<String>): Map<String, Long> {
+    fun getTodayStatsPackages(packages: List<String>): Pair<Map<String, Long>, String?> {
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -22,6 +22,7 @@ class AppDetector(private val context: Context) {
 
         val statsResult = mutableMapOf<String, Long>()
         val lastResumedTime = mutableMapOf<String, Long>()
+        var currentForegroundApp: String? = null
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
@@ -32,6 +33,7 @@ class AppDetector(private val context: Context) {
             when (event.eventType) {
                 android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> {
                     lastResumedTime[pkg] = event.timeStamp
+                    currentForegroundApp = pkg
                 }
                 android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED,
                 android.app.usage.UsageEvents.Event.ACTIVITY_STOPPED -> {
@@ -40,6 +42,9 @@ class AppDetector(private val context: Context) {
                         val duration = event.timeStamp - resumedTime
                         statsResult[pkg] = (statsResult[pkg] ?: 0L) + duration
                         lastResumedTime.remove(pkg)
+                    }
+                    if (currentForegroundApp == pkg) {
+                        currentForegroundApp = null
                     }
                 }
             }
@@ -51,6 +56,7 @@ class AppDetector(private val context: Context) {
             statsResult[pkg] = (statsResult[pkg] ?: 0L) + duration
         }
 
-        return packages.associateWith { statsResult[it] ?: 0L }
+        val finalStats = packages.associateWith { statsResult[it] ?: 0L }
+        return Pair(finalStats, currentForegroundApp)
     }
 }

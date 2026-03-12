@@ -36,7 +36,8 @@ class MonitoringService : Service() {
     }
 
     private fun startMonitoring() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         val trackedPackages = listOf(
             "com.zhiliaoapp.musically",
@@ -47,8 +48,34 @@ class MonitoringService : Service() {
             while (isActive) {
                 try {
                     if (powerManager.isInteractive) {
-                        val statsMap = detector.getTodayStatsForPackages(trackedPackages)
-                        Log.d("AntiAlphaDebug", "Статистика: $statsMap")
+                        val (statsMap, currentApp) = detector.getTodayStatsPackages(trackedPackages)
+                        val currentAppTimeMs = statsMap[currentApp] ?: 0L
+                        val currentAppMinutes = currentAppTimeMs / 1000 / 60
+                        Log.d("AntiAlphaDebug", "Сейчас открыто: $currentApp | Время: $currentAppMinutes мин.")
+
+
+
+                        statsMap.forEach { (pkg, timeMs) ->
+                            val timeMinutes = timeMs / 1000 / 60
+
+                            if (timeMinutes >= 30 && trackedPackages.contains(currentApp) && pkg == currentApp) {
+                                withContext(Dispatchers.Main) {
+                                    blockerManager.showOverlay()
+                                }
+                            }
+                        }
+
+                        if (currentApp != null) {
+                            val timeMin = (statsMap[currentApp] ?: 0L) / 1000 / 60
+                            val notification = NotificationCompat.Builder(this@MonitoringService, CHANNEL_ID)
+                                .setContentTitle("Контроль: $currentApp")
+                                .setContentText("Сегодня: $timeMin мин.")
+                                .setSmallIcon(androidx.core.R.drawable.notification_bg)
+                                .setSilent(true)
+                                .build()
+                            notificationManager.notify(1, notification)
+                        }
+
                     }
                 } catch (e: Exception) {
                     Log.e("AntiAlphaDebug", "Ошибка: ${e.message}")
@@ -75,7 +102,7 @@ class MonitoringService : Service() {
                 "Мониторинг приложений",
                 NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }

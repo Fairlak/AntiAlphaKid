@@ -16,21 +16,11 @@ class BlockerManager(private val context: Context) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: View? = null
 
-    private val blockedPackages = listOf(
-        "com.zhiliaoapp.musically",
-        "com.google.android.youtube"
-    )
 
-    fun checkAndBlock(packageName: String?) {
-        if (blockedPackages.contains(packageName)) {
-            closeCurrentApp()
-            showOverlay()
-        }
-    }
-
-    private fun showOverlay() {
+    fun showOverlay() {
         if (overlayView != null) return
 
+        closeCurrentApp()
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
