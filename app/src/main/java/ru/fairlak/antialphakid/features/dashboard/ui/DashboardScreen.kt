@@ -1,0 +1,153 @@
+package ru.fairlak.antialphakid.features.dashboard.ui
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import ru.fairlak.antialphakid.core.database.AppUsageEntity
+import ru.fairlak.antialphakid.features.dashboard.viewmodel.DashboardViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(
+    viewModel: DashboardViewModel = viewModel(),
+    onManagePermissions: () -> Unit
+) {
+    val limits by viewModel.appLimits.collectAsState()
+
+    DashboardContent(
+        limits = limits,
+        getAppName = { viewModel.getAppName(it) },
+        onDelete = { viewModel.removeLimit(it) },
+        onAddTest = { viewModel.saveLimit("com.zhiliaoapp.musically", 15) },
+        onManagePermissions = onManagePermissions
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardContent(
+    limits: List<AppUsageEntity>,
+    getAppName: (String) -> String,
+    onDelete: (String) -> Unit,
+    onAddTest: () -> Unit,
+    onManagePermissions: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("AntiAlpha Control") })
+        },
+        floatingActionButton = {
+            Column(horizontalAlignment = Alignment.End) {
+                SmallFloatingActionButton(
+                    onClick = onManagePermissions,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Разрешения")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ExtendedFloatingActionButton(
+                    onClick = onAddTest,
+                    icon = { Icon(Icons.Default.Add, null) },
+                    text = { Text("TikTok (15 мин)") }
+                )
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = "Лимиты приложений",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            if (limits.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Список пуст. Добавьте лимит.", color = MaterialTheme.colorScheme.outline)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
+                    items(limits) { item ->
+                        AppLimitItem(
+                            appName = getAppName(item.packageName),
+                            packageName = item.packageName,
+                            minutes = item.limitMinutes,
+                            onDelete = { onDelete(item.packageName) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = appName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+
+                if (appName != packageName) {
+                    Text(text = packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                }
+
+                Text(
+                    text = "Лимит: $minutes мин.",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DashboardPreview() {
+    MaterialTheme {
+        DashboardContent(
+            limits = listOf(
+                AppUsageEntity("com.zhiliaoapp.musically", 15),
+                AppUsageEntity("com.google.android.youtube", 30)
+            ),
+            getAppName = { pkg -> if (pkg.contains("musically")) "TikTok" else "YouTube" },
+            onDelete = {},
+            onAddTest = {},
+            onManagePermissions = {}
+        )
+    }
+}

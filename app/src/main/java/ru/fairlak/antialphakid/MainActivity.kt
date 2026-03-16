@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import ru.fairlak.antialphakid.core.ui.theme.AntiAlphaKidTheme
+import ru.fairlak.antialphakid.features.dashboard.ui.DashboardScreen
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 
 class MainActivity : ComponentActivity() {
@@ -41,24 +42,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AntiAlphaKidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Button(onClick = {
-                            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                DashboardScreen(
+                    onManagePermissions = {
+                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
-                                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
-                            }
-                        }) {
-                            Text(text = "Дать все разрешения")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
+                            val intentOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                            startActivity(intentOverlay)
                         }
                     }
-                }
+                )
             }
         }
     }
