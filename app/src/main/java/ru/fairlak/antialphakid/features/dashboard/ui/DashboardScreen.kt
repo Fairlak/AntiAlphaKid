@@ -1,5 +1,7 @@
 package ru.fairlak.antialphakid.features.dashboard.ui
 
+import android.content.pm.ApplicationInfo
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,12 +28,35 @@ fun DashboardScreen(
     onManagePermissions: () -> Unit
 ) {
     val limits by viewModel.appLimits.collectAsState()
+    val filteredApps by viewModel.filteredApps.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+
+    val showDialog = remember { mutableStateOf(false) }
+
+    if (showDialog.value) {
+        AppSelectionDialog(
+            installedApps = filteredApps,
+            searchQuery = searchQuery,
+            onSearchChange = { viewModel.onSearchQueryChange(it) },
+            getAppName = { viewModel.getAppName(it) },
+            onAppSelected = { pkg ->
+                viewModel.saveLimit(pkg, 30)
+                showDialog.value = false
+                viewModel.onSearchQueryChange("")
+            },
+            onDismiss = {
+                showDialog.value = false
+                viewModel.onSearchQueryChange("")
+            }
+        )
+    }
+
 
     DashboardContent(
         limits = limits,
         getAppName = { viewModel.getAppName(it) },
         onDelete = { viewModel.removeLimit(it) },
-        onAddTest = { viewModel.saveLimit("com.zhiliaoapp.musically", 15) },
+        onAddClick = { showDialog.value = true },
         onManagePermissions = onManagePermissions
     )
 }
@@ -41,7 +67,7 @@ fun DashboardContent(
     limits: List<AppUsageEntity>,
     getAppName: (String) -> String,
     onDelete: (String) -> Unit,
-    onAddTest: () -> Unit,
+    onAddClick: () -> Unit,
     onManagePermissions: () -> Unit
 ) {
     Scaffold(
@@ -60,9 +86,9 @@ fun DashboardContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ExtendedFloatingActionButton(
-                    onClick = onAddTest,
+                    onClick = onAddClick,
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("TikTok (15 мин)") }
+                    text = { Text("Добавить") }
                 )
             }
         }
@@ -135,6 +161,50 @@ fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: (
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppSelectionDialog(
+    installedApps: List<ApplicationInfo>,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    getAppName: (String) -> String,
+    onAppSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        title = { Text("Выберите приложение") },
+        text = {
+            Column(modifier = Modifier.fillMaxHeight(0.8f)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    placeholder = { Text("Поиск...") },
+                    singleLine = true
+                )
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(installedApps) { app ->
+                        ListItem(
+                            headlineContent = { Text(getAppName(app.packageName)) },
+                            supportingContent = { Text(app.packageName) },
+                            modifier = Modifier.clickable { onAppSelected(app.packageName) }
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+
+
 @Preview(showBackground = true)
 @Composable
 fun DashboardPreview() {
@@ -144,9 +214,11 @@ fun DashboardPreview() {
                 AppUsageEntity("com.zhiliaoapp.musically", 15),
                 AppUsageEntity("com.google.android.youtube", 30)
             ),
-            getAppName = { pkg -> if (pkg.contains("musically")) "TikTok" else "YouTube" },
+            getAppName = { pkg ->
+                if (pkg.contains("musically")) "TikTok" else "YouTube"
+            },
             onDelete = {},
-            onAddTest = {},
+            onAddClick = {},
             onManagePermissions = {}
         )
     }
