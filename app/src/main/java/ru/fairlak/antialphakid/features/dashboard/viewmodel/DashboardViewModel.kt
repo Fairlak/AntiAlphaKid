@@ -24,9 +24,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _installedApps = MutableStateFlow<List<ApplicationInfo>>(emptyList())
 
-    val filteredApps: StateFlow<List<ApplicationInfo>> = combine(_installedApps, _searchQuery) { apps, query ->
-        if (query.isBlank()) apps
-        else apps.filter { getAppName(it.packageName).contains(query, ignoreCase = true) }
+
+    val appLimits: StateFlow<List<AppUsageEntity>> = dao.getAllLimits()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filteredApps: StateFlow<List<ApplicationInfo>> = combine(
+        _installedApps,
+        _searchQuery,
+        appLimits
+    ) { apps, query, limits ->
+
+        val existingPackages = limits.map { it.packageName }.toSet()
+
+        apps.filter { app ->
+            val isNotAdded = !existingPackages.contains(app.packageName)
+
+            val matchesQuery = if (query.isBlank()) true
+            else getAppName(app.packageName).contains(query, ignoreCase = true)
+
+            isNotAdded && matchesQuery
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -35,8 +52,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
+            val myPackageName = getApplication<Application>().packageName
             val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
+                .filter { app ->
+                    val hasLauncher = packageManager.getLaunchIntentForPackage(app.packageName) != null
+                    //val isNotSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+                    val isNotMe = app.packageName != myPackageName
+
+                    isNotMe && hasLauncher
+                }
                 .sortedBy { getAppName(it.packageName) }
             _installedApps.value = apps
         }
@@ -46,10 +70,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _searchQuery.value = newQuery
     }
 
-
-
-    val appLimits: StateFlow<List<AppUsageEntity>> = dao.getAllLimits()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun saveLimit(packageName: String, minutes: Int) {
         viewModelScope.launch {

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ fun DashboardScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val showDialog = remember { mutableStateOf(false) }
+    var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
 
     if (showDialog.value) {
         AppSelectionDialog(
@@ -51,12 +53,25 @@ fun DashboardScreen(
         )
     }
 
+    editingEntity.value?.let { entity ->
+        EditLimitDialog(
+            appName = viewModel.getAppName(entity.packageName),
+            currentLimit = entity.limitMinutes,
+            onConfirm = { newMinutes ->
+                viewModel.saveLimit(entity.packageName, newMinutes)
+                editingEntity.value = null
+            },
+            onDismiss = { editingEntity.value = null }
+        )
+    }
+
 
     DashboardContent(
         limits = limits,
         getAppName = { viewModel.getAppName(it) },
         onDelete = { viewModel.removeLimit(it) },
         onAddClick = { showDialog.value = true },
+        onItemClick = { editingEntity.value = it },
         onManagePermissions = onManagePermissions
     )
 }
@@ -68,6 +83,7 @@ fun DashboardContent(
     getAppName: (String) -> String,
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
+    onItemClick: (AppUsageEntity) -> Unit,
     onManagePermissions: () -> Unit
 ) {
     Scaffold(
@@ -119,7 +135,8 @@ fun DashboardContent(
                             appName = getAppName(item.packageName),
                             packageName = item.packageName,
                             minutes = item.limitMinutes,
-                            onDelete = { onDelete(item.packageName) }
+                            onDelete = { onDelete(item.packageName) },
+                            onClick = { onItemClick(item) }
                         )
                     }
                 }
@@ -129,11 +146,12 @@ fun DashboardContent(
 }
 
 @Composable
-fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: () -> Unit) {
+fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: () -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 6.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Row(
@@ -204,6 +222,44 @@ fun AppSelectionDialog(
 }
 
 
+@Composable
+fun EditLimitDialog(
+    appName: String,
+    currentLimit: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var textValue by remember { mutableStateOf(currentLimit.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Лимит для $appName") },
+        text = {
+            Column {
+                Text("Введите время в минутах:", modifier = Modifier.padding(bottom = 8.dp))
+                OutlinedTextField(
+                    value = textValue,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) textValue = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Минуты") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val newLimit = textValue.toIntOrNull() ?: 30
+                onConfirm(newLimit)
+            }) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        }
+    )
+}
+
 
 @Preview(showBackground = true)
 @Composable
@@ -219,6 +275,7 @@ fun DashboardPreview() {
             },
             onDelete = {},
             onAddClick = {},
+            onItemClick = {},
             onManagePermissions = {}
         )
     }
