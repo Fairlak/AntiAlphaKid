@@ -39,13 +39,16 @@ class BlockerManager(private val context: Context) {
 
         val textView = TextView(context).apply {
             text = "Сьебалось, чудище"
-            setTextColor(Color.WHITE)
+            setTextColor(Color.GREEN)
             textSize = 24f
+            typeface = android.graphics.Typeface.MONOSPACE
             setPadding(0, 0, 0, 50)
         }
 
         val closeButton = Button(context).apply {
             text = "Закрыть"
+            setBackgroundColor(Color.BLACK)
+            setTextColor(Color.GREEN)
             setOnClickListener {
                 hideOverlay()
 

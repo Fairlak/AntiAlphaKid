@@ -1,6 +1,11 @@
 package ru.fairlak.antialphakid.features.dashboard.ui
 
+import android.app.AppOpsManager
+import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.drawable.Drawable
+import android.os.Build
+import android.os.Process
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +26,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.fairlak.antialphakid.core.database.AppUsageEntity
 import ru.fairlak.antialphakid.features.dashboard.viewmodel.DashboardViewModel
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,52 +46,75 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(),
     onManagePermissions: () -> Unit
 ) {
-    val limits by viewModel.appLimits.collectAsState()
-    val filteredApps by viewModel.filteredApps.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val context = LocalContext.current
 
-    val showDialog = remember { mutableStateOf(false) }
-    var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
+    var isPermissionGranted by remember {
+        mutableStateOf(hasUsageStatsPermission(context))
+    }
 
-    if (showDialog.value) {
-        AppSelectionDialog(
-            installedApps = filteredApps,
-            searchQuery = searchQuery,
-            onSearchChange = { viewModel.onSearchQueryChange(it) },
-            getAppName = { viewModel.getAppName(it) },
-            onAppSelected = { pkg ->
-                viewModel.saveLimit(pkg, 30)
-                showDialog.value = false
-                viewModel.onSearchQueryChange("")
-            },
-            onDismiss = {
-                showDialog.value = false
-                viewModel.onSearchQueryChange("")
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isPermissionGranted = hasUsageStatsPermission(context)
             }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    if (!isPermissionGranted) {
+        PermissionRequiredScreen(onManagePermissions)
+    } else {
+
+        val limits by viewModel.appLimits.collectAsState()
+        val filteredApps by viewModel.filteredApps.collectAsState()
+        val searchQuery by viewModel.searchQuery.collectAsState()
+
+        val showDialog = remember { mutableStateOf(false) }
+        var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
+
+        if (showDialog.value) {
+            AppSelectionDialog(
+                installedApps = filteredApps,
+                searchQuery = searchQuery,
+                onSearchChange = { viewModel.onSearchQueryChange(it) },
+                getAppName = { viewModel.getAppName(it) },
+                getAppIcon = { viewModel.getAppIcon(it) },
+                onAppSelected = { pkg ->
+                    viewModel.saveLimit(pkg, 30)
+                    showDialog.value = false
+                    viewModel.onSearchQueryChange("")
+                },
+                onDismiss = {
+                    showDialog.value = false
+                    viewModel.onSearchQueryChange("")
+                }
+            )
+        }
+
+        editingEntity.value?.let { entity ->
+            EditLimitDialog(
+                appName = viewModel.getAppName(entity.packageName),
+                currentLimit = entity.limitMinutes,
+                onConfirm = { newMinutes ->
+                    viewModel.saveLimit(entity.packageName, newMinutes)
+                    editingEntity.value = null
+                },
+                onDismiss = { editingEntity.value = null }
+            )
+        }
+
+
+        DashboardContent(
+            limits = limits,
+            getAppName = { viewModel.getAppName(it) },
+            getAppIcon = { viewModel.getAppIcon(it) },
+            onDelete = { viewModel.removeLimit(it) },
+            onAddClick = { showDialog.value = true },
+            onItemClick = { editingEntity.value = it },
+            onManagePermissions = onManagePermissions
         )
     }
-
-    editingEntity.value?.let { entity ->
-        EditLimitDialog(
-            appName = viewModel.getAppName(entity.packageName),
-            currentLimit = entity.limitMinutes,
-            onConfirm = { newMinutes ->
-                viewModel.saveLimit(entity.packageName, newMinutes)
-                editingEntity.value = null
-            },
-            onDismiss = { editingEntity.value = null }
-        )
-    }
-
-
-    DashboardContent(
-        limits = limits,
-        getAppName = { viewModel.getAppName(it) },
-        onDelete = { viewModel.removeLimit(it) },
-        onAddClick = { showDialog.value = true },
-        onItemClick = { editingEntity.value = it },
-        onManagePermissions = onManagePermissions
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +122,7 @@ fun DashboardScreen(
 fun DashboardContent(
     limits: List<AppUsageEntity>,
     getAppName: (String) -> String,
+    getAppIcon: (String) -> Drawable?,
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onItemClick: (AppUsageEntity) -> Unit,
@@ -104,7 +146,9 @@ fun DashboardContent(
                 ExtendedFloatingActionButton(
                     onClick = onAddClick,
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Добавить") }
+                    text = { Text("Добавить") },
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
             }
         }
@@ -135,6 +179,7 @@ fun DashboardContent(
                             appName = getAppName(item.packageName),
                             packageName = item.packageName,
                             minutes = item.limitMinutes,
+                            icon = getAppIcon(item.packageName),
                             onDelete = { onDelete(item.packageName) },
                             onClick = { onItemClick(item) }
                         )
@@ -146,7 +191,14 @@ fun DashboardContent(
 }
 
 @Composable
-fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: () -> Unit, onClick: () -> Unit) {
+fun AppLimitItem(
+    appName: String,
+    packageName: String,
+    icon: Drawable?,
+    minutes: Int,
+    onDelete: () -> Unit,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -158,12 +210,26 @@ fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: (
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            icon?.let { drawable ->
+                Image(
+                    bitmap = drawable.toBitmap().asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .padding(end = 12.dp),
+                    colorFilter = ColorFilter.colorMatrix(
+                        ColorMatrix(floatArrayOf(
+                            0f, 0.5f, 0f, 0f, 0f,
+                            0f, 1f, 0f, 0f, 0f,
+                            0f, 0.5f, 0f, 0f, 0f,
+                            0f, 0f, 0f, 1f, 0f
+                        ))
+                    )
+                )
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = appName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-
-                if (appName != packageName) {
-                    Text(text = packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                }
 
                 Text(
                     text = "Лимит: $minutes мин.",
@@ -173,7 +239,7 @@ fun AppLimitItem(appName: String, packageName: String, minutes: Int, onDelete: (
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -187,6 +253,7 @@ fun AppSelectionDialog(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     getAppName: (String) -> String,
+    getAppIcon: (String) -> Drawable?,
     onAppSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -209,9 +276,26 @@ fun AppSelectionDialog(
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(installedApps) { app ->
+                        val icon = getAppIcon(app.packageName)
                         ListItem(
                             headlineContent = { Text(getAppName(app.packageName)) },
-                            supportingContent = { Text(app.packageName) },
+                            leadingContent = {
+                                icon?.let { drawable ->
+                                    Image(
+                                        bitmap = drawable.toBitmap().asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                        colorFilter = ColorFilter.colorMatrix(
+                                            ColorMatrix(floatArrayOf(
+                                                0f, 0.5f, 0f, 0f, 0f,
+                                                0f, 1f, 0f, 0f, 0f,
+                                                0f, 0.5f, 0f, 0f, 0f,
+                                                0f, 0f, 0f, 1f, 0f
+                                            ))
+                                        )
+                                    )
+                                }
+                            },
                             modifier = Modifier.clickable { onAppSelected(app.packageName) }
                         )
                     }
@@ -261,6 +345,59 @@ fun EditLimitDialog(
 }
 
 
+@Composable
+fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "> SYSTEM ERROR: ACCESS_DENIED",
+                color = Color.Green,
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыт TikTok.",
+                color = Color.Green,
+                fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = onSafeClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+            ) {
+                Text("[ ПРЕДОСТАВИТЬ ДОСТУП ]", color = Color.Green, fontFamily = FontFamily.Monospace)
+            }
+        }
+    }
+}
+
+fun hasUsageStatsPermission(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+    val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        appOps.unsafeCheckOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            context.packageName
+        )
+    } else {
+        appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            context.packageName
+        )
+    }
+    return mode == AppOpsManager.MODE_ALLOWED
+}
+
+
 @Preview(showBackground = true)
 @Composable
 fun DashboardPreview() {
@@ -274,6 +411,7 @@ fun DashboardPreview() {
                 if (pkg.contains("musically")) "TikTok" else "YouTube"
             },
             onDelete = {},
+            getAppIcon = { null },
             onAddClick = {},
             onItemClick = {},
             onManagePermissions = {}

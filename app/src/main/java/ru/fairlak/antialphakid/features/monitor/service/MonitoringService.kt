@@ -32,10 +32,6 @@ class MonitoringService : Service() {
         blockerManager = BlockerManager(this)
         db = AppDatabase.getDatabase(this)
 
-        serviceScope.launch {
-            db.appUsageDao().saveLimit(AppUsageEntity("com.zhiliaoapp.musically", 15))
-            db.appUsageDao().saveLimit(AppUsageEntity("com.google.android.youtube", 30))
-        }
 
         createNotificationChannel()
         val notification = createNotification()

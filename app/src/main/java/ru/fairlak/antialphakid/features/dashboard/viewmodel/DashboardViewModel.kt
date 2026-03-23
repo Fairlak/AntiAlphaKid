@@ -92,4 +92,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             packageName
         }
     }
+
+    fun getAppIcon(packageName: String): android.graphics.drawable.Drawable? {
+        return try {
+            packageManager.getApplicationIcon(packageName)
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

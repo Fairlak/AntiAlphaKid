@@ -6,14 +6,33 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
+val MatrixFont = FontFamily.Monospace
 val Typography = Typography(
+    // Основной текст (списки, описание)
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = MatrixFont,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
+    ),
+    // Заголовки (названия экранов)
+    headlineSmall = TextStyle(
+        fontFamily = MatrixFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp
+    ),
+    // Текст в карточках
+    bodyMedium = TextStyle(
+        fontFamily = MatrixFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp
+    ),
+    // Подписи (пакеты приложений)
+    labelSmall = TextStyle(
+        fontFamily = MatrixFont,
+        fontWeight = FontWeight.Normal,
+        fontSize = 11.sp
     )
     /* Other default text styles to override
     titleLarge = TextStyle(
