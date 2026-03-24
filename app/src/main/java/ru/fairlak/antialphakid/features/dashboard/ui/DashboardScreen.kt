@@ -1,11 +1,13 @@
 package ru.fairlak.antialphakid.features.dashboard.ui
 
+import android.R
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Process
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,14 +33,20 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+
+private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
+private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,8 +119,7 @@ fun DashboardScreen(
             getAppIcon = { viewModel.getAppIcon(it) },
             onDelete = { viewModel.removeLimit(it) },
             onAddClick = { showDialog.value = true },
-            onItemClick = { editingEntity.value = it },
-            onManagePermissions = onManagePermissions
+            onItemClick = { editingEntity.value = it }
         )
     }
 }
@@ -126,29 +133,40 @@ fun DashboardContent(
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onItemClick: (AppUsageEntity) -> Unit,
-    onManagePermissions: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("AntiAlpha Control") })
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = "> Anti Alpha",
+                            color = TerminalGreen,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = TerminalBackground,
+                        titleContentColor = TerminalGreen
+                    )
+                )
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = TerminalGreen
+                )
+            }
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
-                SmallFloatingActionButton(
-                    onClick = onManagePermissions,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = "Разрешения")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 ExtendedFloatingActionButton(
                     onClick = onAddClick,
+                    shape = RectangleShape,
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Добавить") },
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    text = { Text("ДОБАВИТЬ") },
+                    contentColor = TerminalGreen,
+                    modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+                    containerColor = TerminalBackground
                 )
             }
         }
@@ -167,7 +185,7 @@ fun DashboardContent(
 
             if (limits.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Список пуст. Добавьте лимит.", color = MaterialTheme.colorScheme.outline)
+                    Text("Список пуст. Добавьте лимит.", color = MaterialTheme.colorScheme.primary)
                 }
             } else {
                 LazyColumn(
@@ -204,7 +222,12 @@ fun AppLimitItem(
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        shape = RectangleShape,
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = TerminalGreen
+        ),
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -233,13 +256,17 @@ fun AppLimitItem(
 
                 Text(
                     text = "Лимит: $minutes мин.",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = TerminalGreen,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.primary)
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Удалить",
+                    tint = TerminalGreen,
+                    modifier = Modifier.size(32.dp))
             }
         }
     }
@@ -260,7 +287,26 @@ fun AppSelectionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        containerColor = TerminalBackground,
+        modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+        shape = RectangleShape,
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                shape = RectangleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TerminalBackground,
+                    contentColor = TerminalGreen
+                ),
+                modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "ОТМЕНА",
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        },
         title = { Text("Выберите приложение") },
         text = {
             Column(modifier = Modifier.fillMaxHeight(0.8f)) {
@@ -270,14 +316,42 @@ fun AppSelectionDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
-                    placeholder = { Text("Поиск...") },
-                    singleLine = true
+                    placeholder = {
+                        Text(
+                            text = "Поиск...",
+                            color = TerminalGreen.copy(alpha = 0.5f),
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
+                    singleLine = true,
+                    shape = RectangleShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TerminalGreen,
+                        unfocusedTextColor = TerminalGreen,
+                        focusedBorderColor = TerminalGreen,
+                        unfocusedBorderColor = TerminalGreen.copy(alpha = 0.5f),
+                        cursorColor = TerminalGreen,
+                        focusedPlaceholderColor = TerminalGreen.copy(alpha = 0.5f),
+                        unfocusedPlaceholderColor = TerminalGreen.copy(alpha = 0.5f)
+                    ),
+                    textStyle = TextStyle(fontFamily = FontFamily.Monospace)
                 )
 
-                LazyColumn(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(installedApps) { app ->
                         val icon = getAppIcon(app.packageName)
                         ListItem(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, TerminalGreen, RectangleShape)
+                                .clickable { onAppSelected(app.packageName) },
+                            colors = ListItemDefaults.colors(
+                                containerColor = TerminalBackground,
+                                headlineColor = TerminalGreen,
+                            ),
                             headlineContent = { Text(getAppName(app.packageName)) },
                             leadingContent = {
                                 icon?.let { drawable ->
@@ -295,8 +369,7 @@ fun AppSelectionDialog(
                                         )
                                     )
                                 }
-                            },
-                            modifier = Modifier.clickable { onAppSelected(app.packageName) }
+                            }
                         )
                     }
                 }
@@ -357,14 +430,14 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "> SYSTEM ERROR: ACCESS_DENIED",
-                color = Color.Green,
+                color = TerminalGreen,
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.headlineSmall
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыт TikTok.",
-                color = Color.Green,
+                text = "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыто ваше приложение.",
+                color = TerminalGreen,
                 fontFamily = FontFamily.Monospace,
                 textAlign = TextAlign.Center
             )
@@ -373,7 +446,7 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                 onClick = onSafeClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
             ) {
-                Text("[ ПРЕДОСТАВИТЬ ДОСТУП ]", color = Color.Green, fontFamily = FontFamily.Monospace)
+                Text("[ ПРЕДОСТАВИТЬ ДОСТУП ]", color = TerminalGreen, fontFamily = FontFamily.Monospace)
             }
         }
     }
@@ -414,7 +487,6 @@ fun DashboardPreview() {
             getAppIcon = { null },
             onAddClick = {},
             onItemClick = {},
-            onManagePermissions = {}
         )
     }
 }
