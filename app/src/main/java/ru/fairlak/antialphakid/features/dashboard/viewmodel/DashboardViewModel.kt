@@ -7,18 +7,26 @@ import kotlinx.coroutines.flow.combine
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ru.fairlak.antialphakid.core.database.AppDatabase
 import ru.fairlak.antialphakid.core.database.AppUsageEntity
+import ru.fairlak.antialphakid.features.monitor.data.AppDetector
 import kotlin.text.contains
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).appUsageDao()
     private val packageManager = application.packageManager
+    private var statsUpdateJob: Job? = null
+    private val detector = AppDetector(application)
+    private val _usageStats = MutableStateFlow<Map<String, Long>?>(null)
+    val usageStats: StateFlow<Map<String, Long>?> = _usageStats
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
@@ -48,6 +56,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadInstalledApps()
+        updateUsageStats()
     }
 
     private fun loadInstalledApps() {
@@ -66,6 +75,40 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun updateUsageStats() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val limits = appLimits.value
+            val packages = limits.map { it.packageName }
+
+            if (packages.isEmpty()) {
+                _usageStats.value = emptyMap()
+                return@launch
+            }
+
+            val (stats, _) = detector.getTodayStatsPackages(packages)
+            _usageStats.value = stats
+        }
+    }
+
+    fun startStatsUpdates() {
+        statsUpdateJob?.cancel()
+        statsUpdateJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val limits = appLimits.value
+                val packages = limits.map { it.packageName }
+                if (packages.isNotEmpty()) {
+                    val (stats, _) = detector.getTodayStatsPackages(packages)
+                    _usageStats.value = stats
+                }
+                delay(5000)
+            }
+        }
+    }
+
+    fun stopStatsUpdates() {
+        statsUpdateJob?.cancel()
+    }
+
     fun onSearchQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
     }
@@ -74,6 +117,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveLimit(packageName: String, minutes: Int) {
         viewModelScope.launch {
             dao.saveLimit(AppUsageEntity(packageName, minutes))
+            updateUsageStats()
         }
     }
 

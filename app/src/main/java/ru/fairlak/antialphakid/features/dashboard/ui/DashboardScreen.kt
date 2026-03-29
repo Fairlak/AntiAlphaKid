@@ -77,9 +77,21 @@ fun DashboardScreen(
         val limits by viewModel.appLimits.collectAsState()
         val filteredApps by viewModel.filteredApps.collectAsState()
         val searchQuery by viewModel.searchQuery.collectAsState()
+        val usageStats by viewModel.usageStats.collectAsState()
 
         val showDialog = remember { mutableStateOf(false) }
         var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
+
+        LaunchedEffect(Unit) {
+            viewModel.updateUsageStats()
+        }
+
+        DisposableEffect(Unit) {
+            viewModel.startStatsUpdates()
+            onDispose {
+                viewModel.stopStatsUpdates()
+            }
+        }
 
         if (showDialog.value) {
             AppSelectionDialog(
@@ -116,6 +128,7 @@ fun DashboardScreen(
         DashboardContent(
             limits = limits,
             getAppName = { viewModel.getAppName(it) },
+            usageStats = usageStats,
             getAppIcon = { viewModel.getAppIcon(it) },
             onDelete = { viewModel.removeLimit(it) },
             onAddClick = { showDialog.value = true },
@@ -130,6 +143,7 @@ fun DashboardContent(
     limits: List<AppUsageEntity>,
     getAppName: (String) -> String,
     getAppIcon: (String) -> Drawable?,
+    usageStats: Map<String, Long>?,
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onItemClick: (AppUsageEntity) -> Unit,
@@ -193,14 +207,20 @@ fun DashboardContent(
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
                     items(limits) { item ->
-                        AppLimitItem(
-                            appName = getAppName(item.packageName),
-                            packageName = item.packageName,
-                            minutes = item.limitMinutes,
-                            icon = getAppIcon(item.packageName),
-                            onDelete = { onDelete(item.packageName) },
-                            onClick = { onItemClick(item) }
-                        )
+                        val usedMs = usageStats?.get(item.packageName)
+                        if (usedMs == null) {
+                            AppLimitItemPlaceholder(appName = getAppName(item.packageName))
+                        } else {
+                            AppLimitItem(
+                                appName = getAppName(item.packageName),
+                                packageName = item.packageName,
+                                minutes = item.limitMinutes,
+                                icon = getAppIcon(item.packageName),
+                                usedMs = usedMs,
+                                onDelete = { onDelete(item.packageName) },
+                                onClick = { onItemClick(item) }
+                            )
+                        }
                     }
                 }
             }
@@ -214,6 +234,7 @@ fun AppLimitItem(
     packageName: String,
     icon: Drawable?,
     minutes: Int,
+    usedMs: Long,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -252,12 +273,16 @@ fun AppLimitItem(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = appName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                Text(text = appName,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontFamily = FontFamily.Monospace)
 
                 Text(
-                    text = "Лимит: $minutes мин.",
+                    text = getTerminalProgressBar(usedMs, minutes),
                     color = TerminalGreen,
                     style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -470,23 +495,39 @@ fun hasUsageStatsPermission(context: Context): Boolean {
     return mode == AppOpsManager.MODE_ALLOWED
 }
 
+fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
+    val currentMinutes = (currentMs / 1000 / 60).toInt()
+    val totalBars = 10
 
-@Preview(showBackground = true)
+    val progress = if (limitMinutes > 0) {
+        (currentMinutes.toFloat() / limitMinutes.toFloat() * totalBars).toInt().coerceIn(0, totalBars)
+    } else 0
+
+    val filled = "#".repeat(progress)
+    val empty = "-".repeat(totalBars - progress)
+
+    return "[$filled$empty] $currentMinutes/$limitMinutes MIN"
+}
+
+
+
 @Composable
-fun DashboardPreview() {
-    MaterialTheme {
-        DashboardContent(
-            limits = listOf(
-                AppUsageEntity("com.zhiliaoapp.musically", 15),
-                AppUsageEntity("com.google.android.youtube", 30)
-            ),
-            getAppName = { pkg ->
-                if (pkg.contains("musically")) "TikTok" else "YouTube"
-            },
-            onDelete = {},
-            getAppIcon = { null },
-            onAddClick = {},
-            onItemClick = {},
-        )
+fun AppLimitItemPlaceholder(appName: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, TerminalGreen.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = appName, fontFamily = FontFamily.Monospace, color = TerminalGreen.copy(alpha = 0.5f))
+            Text(
+                text = "[..........] LOADING...",
+                fontFamily = FontFamily.Monospace,
+                color = TerminalGreen.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 }
+
