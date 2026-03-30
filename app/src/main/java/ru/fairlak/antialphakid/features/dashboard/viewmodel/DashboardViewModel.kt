@@ -56,7 +56,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadInstalledApps()
-        updateUsageStats()
+        viewModelScope.launch {
+            appLimits.collect { limits ->
+                if (limits.isNotEmpty()) {
+                    updateUsageStatsSync()
+                } else {
+                    _usageStats.value = emptyMap()
+                }
+            }
+        }
     }
 
     private fun loadInstalledApps() {
@@ -75,32 +83,30 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun updateUsageStats() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val limits = appLimits.value
-            val packages = limits.map { it.packageName }
 
-            if (packages.isEmpty()) {
-                _usageStats.value = emptyMap()
-                return@launch
-            }
-
+    private fun updateUsageStatsSync() {
+        val limits = appLimits.value
+        val packages = limits.map { it.packageName }
+        if (packages.isNotEmpty()) {
             val (stats, _) = detector.getTodayStatsPackages(packages)
             _usageStats.value = stats
+        }
+    }
+
+    fun updateUsageStats() {
+        viewModelScope.launch(Dispatchers.IO) {
+            updateUsageStatsSync()
         }
     }
 
     fun startStatsUpdates() {
         statsUpdateJob?.cancel()
         statsUpdateJob = viewModelScope.launch(Dispatchers.IO) {
+            updateUsageStatsSync()
+
             while (isActive) {
-                val limits = appLimits.value
-                val packages = limits.map { it.packageName }
-                if (packages.isNotEmpty()) {
-                    val (stats, _) = detector.getTodayStatsPackages(packages)
-                    _usageStats.value = stats
-                }
-                delay(5000)
+                delay(300_000)
+                updateUsageStatsSync()
             }
         }
     }
@@ -117,7 +123,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveLimit(packageName: String, minutes: Int) {
         viewModelScope.launch {
             dao.saveLimit(AppUsageEntity(packageName, minutes))
-            updateUsageStats()
         }
     }
 

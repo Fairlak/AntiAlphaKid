@@ -65,6 +65,7 @@ fun DashboardScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isPermissionGranted = hasUsageStatsPermission(context)
+                viewModel.updateUsageStats()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -244,7 +245,7 @@ fun AppLimitItem(
             .padding(vertical = 6.dp)
             .clickable { onClick() },
         shape = RectangleShape,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             width = 1.dp,
             color = TerminalGreen
         ),
