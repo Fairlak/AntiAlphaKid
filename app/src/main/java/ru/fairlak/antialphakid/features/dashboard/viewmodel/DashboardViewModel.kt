@@ -1,6 +1,7 @@
 package ru.fairlak.antialphakid.features.dashboard.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.combine
@@ -31,6 +32,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val searchQuery: StateFlow<String> = _searchQuery
 
     private val _installedApps = MutableStateFlow<List<ApplicationInfo>>(emptyList())
+    private val prefs = application.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
+    private val _isSystemActive = MutableStateFlow(prefs.getBoolean("system_active", true))
+    val isSystemActive: StateFlow<Boolean> = _isSystemActive
 
 
     val appLimits: StateFlow<List<AppUsageEntity>> = dao.getAllLimits()
@@ -65,6 +69,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
         }
+    }
+
+    fun toggleSystemState() {
+        val newState = !_isSystemActive.value
+        _isSystemActive.value = newState
+        prefs.edit().putBoolean("system_active", newState).apply()
     }
 
     private fun loadInstalledApps() {

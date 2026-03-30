@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -45,10 +46,21 @@ class MonitoringService : Service() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
 
-
         serviceScope.launch {
+            val prefs = getSharedPreferences("anti_alpha_prefs", MODE_PRIVATE)
             while (isActive) {
                 try {
+                    val isSystemActive = prefs.getBoolean("system_active", true)
+
+                    if (!isSystemActive) {
+                        withContext(Dispatchers.Main) {
+                            blockerManager.hideOverlay()
+                        }
+                        delay(5000)
+                        continue
+                    }
+
+
                     if (powerManager.isInteractive) {
                         val allLimits = db.appUsageDao().getAllLimits().first()
                         val trackedPackages = allLimits.map { it.packageName }

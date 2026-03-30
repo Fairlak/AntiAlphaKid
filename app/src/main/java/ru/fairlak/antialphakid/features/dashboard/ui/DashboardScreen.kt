@@ -79,6 +79,7 @@ fun DashboardScreen(
         val filteredApps by viewModel.filteredApps.collectAsState()
         val searchQuery by viewModel.searchQuery.collectAsState()
         val usageStats by viewModel.usageStats.collectAsState()
+        val isSystemActive by viewModel.isSystemActive.collectAsState()
 
         val showDialog = remember { mutableStateOf(false) }
         var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
@@ -133,7 +134,9 @@ fun DashboardScreen(
             getAppIcon = { viewModel.getAppIcon(it) },
             onDelete = { viewModel.removeLimit(it) },
             onAddClick = { showDialog.value = true },
-            onItemClick = { editingEntity.value = it }
+            onItemClick = { editingEntity.value = it },
+            isSystemActive = isSystemActive,
+            onToggleSystem = { viewModel.toggleSystemState() }
         )
     }
 }
@@ -148,6 +151,8 @@ fun DashboardContent(
     onDelete: (String) -> Unit,
     onAddClick: () -> Unit,
     onItemClick: (AppUsageEntity) -> Unit,
+    isSystemActive: Boolean,
+    onToggleSystem: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -165,6 +170,15 @@ fun DashboardContent(
                         containerColor = TerminalBackground,
                         titleContentColor = TerminalGreen
                     )
+                )
+
+                Text(
+                    text = "> SYSTEM_STATE: [ ${if (isSystemActive) "ON" else "OFF"} ]",
+                    color = if (isSystemActive) TerminalGreen else Color.Red,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .clickable { onToggleSystem() }
+                        .padding(bottom = 20.dp)
                 )
                 HorizontalDivider(
                     thickness = 1.dp,
@@ -405,6 +419,7 @@ fun AppSelectionDialog(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditLimitDialog(
     appName: String,
@@ -416,29 +431,69 @@ fun EditLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Лимит для $appName") },
+        containerColor = TerminalBackground,
+        modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+        shape = RectangleShape,
+        title = {
+            Text(
+                text = "> РЕДАКТИРОВАТЬ: $appName",
+                color = TerminalGreen,
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
         text = {
             Column {
-                Text("Введите время в минутах:", modifier = Modifier.padding(bottom = 8.dp))
+                Text(
+                    text = "Введите новый лимит (мин):",
+                    color = TerminalGreen,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
                 OutlinedTextField(
                     value = textValue,
                     onValueChange = { if (it.all { char -> char.isDigit() }) textValue = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Минуты") },
-                    singleLine = true
+                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, color = TerminalGreen),
+                    singleLine = true,
+                    shape = RectangleShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TerminalGreen,
+                        unfocusedTextColor = TerminalGreen,
+                        focusedBorderColor = TerminalGreen,
+                        unfocusedBorderColor = TerminalGreen.copy(alpha = 0.5f),
+                        cursorColor = TerminalGreen
+                    )
                 )
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val newLimit = textValue.toIntOrNull() ?: 30
-                onConfirm(newLimit)
-            }) {
-                Text("Сохранить")
+            Button(
+                onClick = {
+                    val newLimit = textValue.toIntOrNull() ?: 30
+                    onConfirm(newLimit)
+                },
+                shape = RectangleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TerminalBackground,
+                    contentColor = TerminalGreen
+                ),
+                modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape)
+            ) {
+                Text("СОХРАНИТЬ", fontFamily = FontFamily.Monospace)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
+            TextButton(
+                onClick = onDismiss,
+                shape = RectangleShape
+            ) {
+                Text(
+                    "ОТМЕНА",
+                    color = TerminalGreen.copy(alpha = 0.7f),
+                    fontFamily = FontFamily.Monospace
+                )
+            }
         }
     )
 }

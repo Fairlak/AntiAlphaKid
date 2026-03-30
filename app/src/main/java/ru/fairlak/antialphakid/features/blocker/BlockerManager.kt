@@ -48,10 +48,11 @@ class BlockerManager(private val context: Context) {
     }
 
     private class MatrixBlockerView(context: Context, val onClose: () -> Unit) : View(context) {
+        private val matrixChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ".toCharArray()
         private val paint = Paint().apply {
-            color = Color.GREEN
-            textSize = 60f
+            textSize = 50f
             typeface = Typeface.MONOSPACE
+            isAntiAlias = true
         }
         private val bgPaint = Paint().apply {
             color = Color.BLACK
@@ -59,66 +60,77 @@ class BlockerManager(private val context: Context) {
         }
         private val random = Random()
         private var bgAlpha = 0
-        private val columns = mutableListOf<Int>()
-        private var frameCounter = 0
+        private val columns = mutableListOf<Float>()
+        private val speeds = mutableListOf<Float>()
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
             super.onSizeChanged(w, h, oldw, oldh)
-            val columnCount = w / 35
+            val columnWidth = 40f
+            val columnCount = (w / columnWidth).toInt()
+
             columns.clear()
+            speeds.clear()
+
             repeat(columnCount) {
-                columns.add(-random.nextInt(h))
+                columns.add(-random.nextInt(h).toFloat())
+                speeds.add(random.nextInt(25) + 15f)
             }
         }
 
         override fun onDraw(canvas: Canvas) {
-            if (bgAlpha < 240) bgAlpha += 4
+            if (bgAlpha < 300) bgAlpha += 5
             bgPaint.alpha = bgAlpha
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-            frameCounter++
-
             for (i in columns.indices) {
-                val x = i * 35f
-                val headY = columns[i].toFloat()
+                val x = i * 40f
+                val headY = columns[i]
 
-                for (j in 0..15) {
-                    val symbolY = headY - (j * 60f)
+                for (j in 0..20) {
+                    val symbolY = headY - (j * 50f)
 
-                    if (symbolY > 0 && symbolY < height + 100) {
-                        val alphaFade = (255 - (j * 15)).coerceIn(0, 255)
+                    if (symbolY > -50 && symbolY < height + 50) {
+
+                        paint.color = Color.GREEN
+                        val alphaFade = (255 - (j * 12)).coerceIn(0, 255)
                         paint.alpha = alphaFade
 
-
-                        val text = random.nextInt(10).toString()
-                        canvas.drawText(text, x, symbolY, paint)
+                        val charToShow = matrixChars[random.nextInt(matrixChars.size)]
+                        canvas.drawText(charToShow.toString(), x, symbolY, paint)
                     }
                 }
 
-                columns[i] += 25
+                columns[i] += speeds[i]
 
-                if (columns[i] - 900 > height) {
-                    columns[i] = -random.nextInt(height / 2)
+                if (columns[i] - 1000 > height) {
+                    columns[i] = -50f
+                    speeds[i] = random.nextInt(25) + 15f
                 }
             }
 
             if (bgAlpha >= 240) {
-                val centerPaint = Paint(paint).apply {
-                    textSize = 70f
-                    alpha = 255
-                    textAlign = Paint.Align.CENTER
-                    style = Paint.Style.FILL
-                    isFakeBoldText = true
-                }
-                canvas.drawText("ЛИМИТ ИСЧЕРПАН", width / 2f, height / 2f, centerPaint)
-                canvas.drawText("[ ЗАКРЫТЬ ]", width / 2f, height / 2f + 150f, centerPaint)
+                drawOverlayText(canvas)
             }
 
-            postInvalidateDelayed(50)
+            postInvalidateDelayed(40)
+        }
+
+        private fun drawOverlayText(canvas: Canvas) {
+            val centerPaint = Paint().apply {
+                color = Color.GREEN
+                textSize = 70f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+                isFakeBoldText = true
+                setShadowLayer(10f, 0f, 0f, Color.GREEN)
+            }
+            canvas.drawText("ЛИМИТ ИСЧЕРПАН", width / 2f, height / 2f, centerPaint)
+            centerPaint.textSize = 50f
+            canvas.drawText("[ ЗАКРЫТЬ ]", width / 2f, height / 2f + 150f, centerPaint)
         }
 
         init {
-            setOnClickListener { if (bgAlpha > 150) onClose() }
+            setOnClickListener { if (bgAlpha > 180) onClose() }
         }
     }
 }
