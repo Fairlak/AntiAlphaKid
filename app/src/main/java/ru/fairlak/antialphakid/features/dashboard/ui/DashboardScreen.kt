@@ -7,6 +7,12 @@ import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Process
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,16 +40,21 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
 
 private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
 private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
@@ -80,6 +91,7 @@ fun DashboardScreen(
         val searchQuery by viewModel.searchQuery.collectAsState()
         val usageStats by viewModel.usageStats.collectAsState()
         val isSystemActive by viewModel.isSystemActive.collectAsState()
+        val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
 
         val showDialog = remember { mutableStateOf(false) }
         var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
@@ -110,7 +122,10 @@ fun DashboardScreen(
                 onDismiss = {
                     showDialog.value = false
                     viewModel.onSearchQueryChange("")
-                }
+                },
+                activeColor = activeColor,
+                isSystemActive = isSystemActive
+
             )
         }
 
@@ -122,7 +137,8 @@ fun DashboardScreen(
                     viewModel.saveLimit(entity.packageName, newMinutes)
                     editingEntity.value = null
                 },
-                onDismiss = { editingEntity.value = null }
+                onDismiss = { editingEntity.value = null },
+                activeColor = activeColor
             )
         }
 
@@ -136,7 +152,8 @@ fun DashboardScreen(
             onAddClick = { showDialog.value = true },
             onItemClick = { editingEntity.value = it },
             isSystemActive = isSystemActive,
-            onToggleSystem = { viewModel.toggleSystemState() }
+            onToggleSystem = { viewModel.toggleSystemState() },
+            activeColor = activeColor,
         )
     }
 }
@@ -152,8 +169,20 @@ fun DashboardContent(
     onAddClick: () -> Unit,
     onItemClick: (AppUsageEntity) -> Unit,
     isSystemActive: Boolean,
-    onToggleSystem: () -> Unit
+    onToggleSystem: () -> Unit,
+    activeColor: Color,
 ) {
+
+    val infiniteTransition = rememberInfiniteTransition(label = "Blink")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Alpha"
+    )
     Scaffold(
         topBar = {
             Column {
@@ -161,28 +190,44 @@ fun DashboardContent(
                     title = {
                         Text(
                             text = "> Anti Alpha",
-                            color = TerminalGreen,
+                            color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = TerminalBackground,
-                        titleContentColor = TerminalGreen
+                        titleContentColor = activeColor
                     )
                 )
 
                 Text(
-                    text = "> SYSTEM_STATE: [ ${if (isSystemActive) "ON" else "OFF"} ]",
-                    color = if (isSystemActive) TerminalGreen else Color.Red,
+                    text = buildAnnotatedString {
+                        append("> SYSTEM_STATE: [ ")
+                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                            append(if (isSystemActive) "ON" else "OFF")
+                        }
+                        append(" ]")
+                    },
+                    color = activeColor,
                     fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+
+                    textAlign = TextAlign.End,
                     modifier = Modifier
-                        .clickable { onToggleSystem() }
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onToggleSystem()
+                        }
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 20.dp)
                 )
                 HorizontalDivider(
                     thickness = 1.dp,
-                    color = TerminalGreen
+                    color = activeColor
                 )
             }
         },
@@ -193,8 +238,8 @@ fun DashboardContent(
                     shape = RectangleShape,
                     icon = { Icon(Icons.Default.Add, null) },
                     text = { Text("ДОБАВИТЬ") },
-                    contentColor = TerminalGreen,
-                    modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+                    contentColor = activeColor,
+                    modifier = Modifier.border(1.dp, activeColor, RectangleShape),
                     containerColor = TerminalBackground
                 )
             }
@@ -209,7 +254,8 @@ fun DashboardContent(
             Text(
                 text = "Лимиты приложений",
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier.padding(vertical = 16.dp),
+                color = activeColor
             )
 
             if (limits.isEmpty()) {
@@ -233,7 +279,9 @@ fun DashboardContent(
                                 icon = getAppIcon(item.packageName),
                                 usedMs = usedMs,
                                 onDelete = { onDelete(item.packageName) },
-                                onClick = { onItemClick(item) }
+                                onClick = { onItemClick(item) },
+                                activeColor = activeColor,
+                                isSystemActive = isSystemActive
                             )
                         }
                     }
@@ -251,7 +299,9 @@ fun AppLimitItem(
     minutes: Int,
     usedMs: Long,
     onDelete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    activeColor: Color,
+    isSystemActive: Boolean
 ) {
     Card(
         modifier = Modifier
@@ -261,7 +311,7 @@ fun AppLimitItem(
         shape = RectangleShape,
         border = BorderStroke(
             width = 1.dp,
-            color = TerminalGreen
+            color = activeColor
         ),
         colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
@@ -277,12 +327,7 @@ fun AppLimitItem(
                         .size(60.dp)
                         .padding(end = 12.dp),
                     colorFilter = ColorFilter.colorMatrix(
-                        ColorMatrix(floatArrayOf(
-                            0f, 0.5f, 0f, 0f, 0f,
-                            0f, 1f, 0f, 0f, 0f,
-                            0f, 0.5f, 0f, 0f, 0f,
-                            0f, 0f, 0f, 1f, 0f
-                        ))
+                        getTerminalColorMatrix(isSystemActive)
                     )
                 )
             }
@@ -290,12 +335,13 @@ fun AppLimitItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = appName,
                     fontWeight = FontWeight.Bold,
+                    color = activeColor,
                     style = MaterialTheme.typography.bodyLarge,
                     fontFamily = FontFamily.Monospace)
 
                 Text(
                     text = getTerminalProgressBar(usedMs, minutes),
-                    color = TerminalGreen,
+                    color = activeColor,
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(top = 4.dp)
@@ -305,7 +351,7 @@ fun AppLimitItem(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Удалить",
-                    tint = TerminalGreen,
+                    tint = activeColor,
                     modifier = Modifier.size(32.dp))
             }
         }
@@ -322,13 +368,15 @@ fun AppSelectionDialog(
     getAppName: (String) -> String,
     getAppIcon: (String) -> Drawable?,
     onAppSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    activeColor: Color,
+    isSystemActive: Boolean
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+        modifier = Modifier.border(1.dp, activeColor, RectangleShape),
         shape = RectangleShape,
         dismissButton = {
             Button(
@@ -336,9 +384,9 @@ fun AppSelectionDialog(
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TerminalBackground,
-                    contentColor = TerminalGreen
+                    contentColor = activeColor
                 ),
-                modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+                modifier = Modifier.border(1.dp, activeColor, RectangleShape),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
@@ -347,7 +395,13 @@ fun AppSelectionDialog(
                 )
             }
         },
-        title = { Text("Выберите приложение") },
+        title = {
+            Text(
+                text = "Выберите приложение",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace
+            )
+        },
         text = {
             Column(modifier = Modifier.fillMaxHeight(0.8f)) {
                 OutlinedTextField(
@@ -359,20 +413,20 @@ fun AppSelectionDialog(
                     placeholder = {
                         Text(
                             text = "Поиск...",
-                            color = TerminalGreen.copy(alpha = 0.5f),
+                            color = activeColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace
                         )
                     },
                     singleLine = true,
                     shape = RectangleShape,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TerminalGreen,
-                        unfocusedTextColor = TerminalGreen,
-                        focusedBorderColor = TerminalGreen,
-                        unfocusedBorderColor = TerminalGreen.copy(alpha = 0.5f),
-                        cursorColor = TerminalGreen,
-                        focusedPlaceholderColor = TerminalGreen.copy(alpha = 0.5f),
-                        unfocusedPlaceholderColor = TerminalGreen.copy(alpha = 0.5f)
+                        focusedTextColor = activeColor,
+                        unfocusedTextColor = activeColor,
+                        focusedBorderColor = activeColor,
+                        unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
+                        cursorColor = activeColor,
+                        focusedPlaceholderColor = activeColor.copy(alpha = 0.5f),
+                        unfocusedPlaceholderColor = activeColor.copy(alpha = 0.5f)
                     ),
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace)
                 )
@@ -386,11 +440,11 @@ fun AppSelectionDialog(
                         ListItem(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, TerminalGreen, RectangleShape)
+                                .border(1.dp, activeColor, RectangleShape)
                                 .clickable { onAppSelected(app.packageName) },
                             colors = ListItemDefaults.colors(
                                 containerColor = TerminalBackground,
-                                headlineColor = TerminalGreen,
+                                headlineColor = activeColor,
                             ),
                             headlineContent = { Text(getAppName(app.packageName)) },
                             leadingContent = {
@@ -400,12 +454,7 @@ fun AppSelectionDialog(
                                         contentDescription = null,
                                         modifier = Modifier.size(40.dp),
                                         colorFilter = ColorFilter.colorMatrix(
-                                            ColorMatrix(floatArrayOf(
-                                                0f, 0.5f, 0f, 0f, 0f,
-                                                0f, 1f, 0f, 0f, 0f,
-                                                0f, 0.5f, 0f, 0f, 0f,
-                                                0f, 0f, 0f, 1f, 0f
-                                            ))
+                                            getTerminalColorMatrix(isSystemActive)
                                         )
                                     )
                                 }
@@ -425,19 +474,20 @@ fun EditLimitDialog(
     appName: String,
     currentLimit: Int,
     onConfirm: (Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    activeColor: Color
 ) {
     var textValue by remember { mutableStateOf(currentLimit.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape),
+        modifier = Modifier.border(1.dp, activeColor, RectangleShape),
         shape = RectangleShape,
         title = {
             Text(
                 text = "> РЕДАКТИРОВАТЬ: $appName",
-                color = TerminalGreen,
+                color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.titleLarge
             )
@@ -446,7 +496,7 @@ fun EditLimitDialog(
             Column {
                 Text(
                     text = "Введите новый лимит (мин):",
-                    color = TerminalGreen,
+                    color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -454,15 +504,15 @@ fun EditLimitDialog(
                     value = textValue,
                     onValueChange = { if (it.all { char -> char.isDigit() }) textValue = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, color = TerminalGreen),
+                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, color = activeColor),
                     singleLine = true,
                     shape = RectangleShape,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TerminalGreen,
-                        unfocusedTextColor = TerminalGreen,
-                        focusedBorderColor = TerminalGreen,
-                        unfocusedBorderColor = TerminalGreen.copy(alpha = 0.5f),
-                        cursorColor = TerminalGreen
+                        focusedTextColor = activeColor,
+                        unfocusedTextColor = activeColor,
+                        focusedBorderColor = activeColor,
+                        unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
+                        cursorColor = activeColor
                     )
                 )
             }
@@ -476,9 +526,9 @@ fun EditLimitDialog(
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TerminalBackground,
-                    contentColor = TerminalGreen
+                    contentColor = activeColor
                 ),
-                modifier = Modifier.border(1.dp, TerminalGreen, RectangleShape)
+                modifier = Modifier.border(1.dp, activeColor, RectangleShape)
             ) {
                 Text("СОХРАНИТЬ", fontFamily = FontFamily.Monospace)
             }
@@ -490,7 +540,7 @@ fun EditLimitDialog(
             ) {
                 Text(
                     "ОТМЕНА",
-                    color = TerminalGreen.copy(alpha = 0.7f),
+                    color = activeColor.copy(alpha = 0.7f),
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -565,12 +615,35 @@ fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
     return "[$filled$empty] $currentMinutes/$limitMinutes MIN"
 }
 
+fun getTerminalColorMatrix(isSystemActive: Boolean): ColorMatrix {
+    return if (isSystemActive) {
+        // Зеленый режим (TerminalGreen)
+        ColorMatrix(floatArrayOf(
+            0f, 0.5f, 0f, 0f, 0f,
+            0f, 1f,   0f, 0f, 0f,
+            0f, 0.5f, 0f, 0f, 0f,
+            0f, 0f,   0f, 1f, 0f
+        ))
+    } else {
+        // Красный режим (TerminalRed)
+        // Берем 100% яркости из зеленого канала и направляем в КРАСНЫЙ выход
+        ColorMatrix(floatArrayOf(
+            0f, 1f,   0f, 0f, 0f, // Red выход получает данные из Green канала
+            0f, 0f,   0f, 0f, 0f, // Green выход пустой
+            0f, 0f,   0f, 0f, 0f, // Blue выход пустой
+            0f, 0f,   0f, 1f, 0f  // Alpha
+        ))
+    }
+}
+
 
 
 @Composable
 fun AppLimitItemPlaceholder(appName: String) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         shape = RectangleShape,
         border = BorderStroke(1.dp, TerminalGreen.copy(alpha = 0.3f)),
         colors = CardDefaults.cardColors(containerColor = TerminalBackground)
