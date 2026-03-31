@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
 
     val appLimits: StateFlow<List<AppUsageEntity>> = dao.getAllLimits()
+        .map { limits -> limits.sortedBy { it.addedAt } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredApps: StateFlow<List<ApplicationInfo>> = combine(
@@ -132,7 +134,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun saveLimit(packageName: String, minutes: Int) {
         viewModelScope.launch {
-            dao.saveLimit(AppUsageEntity(packageName, minutes))
+            val existing = appLimits.value.find { it.packageName == packageName }
+            val entity = existing?.
+            copy(limitMinutes = minutes) ?: AppUsageEntity(packageName, minutes)
+            dao.saveLimit(entity)
         }
     }
 

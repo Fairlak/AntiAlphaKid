@@ -19,7 +19,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "anti_alpha_db"
-                ).build()
+                ).fallbackToDestructiveMigration(false).build()
                 INSTANCE = instance
                 instance
             }

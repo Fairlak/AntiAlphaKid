@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "app_limits")
 data class AppUsageEntity(
     @PrimaryKey val packageName: String,
-    val limitMinutes: Int
+    val limitMinutes: Int,
+    val addedAt: Long = System.currentTimeMillis()
 )

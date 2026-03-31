@@ -41,6 +41,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
@@ -267,7 +268,7 @@ fun DashboardContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    items(limits) { item ->
+                    items(limits, { it.packageName }) { item ->
                         val usedMs = usageStats?.get(item.packageName)
                         if (usedMs == null) {
                             AppLimitItemPlaceholder(appName = getAppName(item.packageName))
@@ -425,6 +426,10 @@ fun AppSelectionDialog(
                         focusedBorderColor = activeColor,
                         unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
                         cursorColor = activeColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = activeColor,
+                            backgroundColor = activeColor.copy(alpha = 0.4f)
+                        ),
                         focusedPlaceholderColor = activeColor.copy(alpha = 0.5f),
                         unfocusedPlaceholderColor = activeColor.copy(alpha = 0.5f)
                     ),
@@ -511,6 +516,10 @@ fun EditLimitDialog(
                         focusedTextColor = activeColor,
                         unfocusedTextColor = activeColor,
                         focusedBorderColor = activeColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = activeColor,
+                            backgroundColor = activeColor.copy(alpha = 0.4f)
+                        ),
                         unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
                         cursorColor = activeColor
                     )
@@ -605,9 +614,12 @@ fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
     val currentMinutes = (currentMs / 1000 / 60).toInt()
     val totalBars = 10
 
-    val progress = if (limitMinutes > 0) {
-        (currentMinutes.toFloat() / limitMinutes.toFloat() * totalBars).toInt().coerceIn(0, totalBars)
-    } else 0
+    val progress = when {
+        limitMinutes <= 0 -> totalBars
+        else -> (currentMinutes.toFloat() / limitMinutes.toFloat() * totalBars)
+            .toInt()
+            .coerceIn(0, totalBars)
+    }
 
     val filled = "#".repeat(progress)
     val empty = "-".repeat(totalBars - progress)
@@ -617,7 +629,6 @@ fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
 
 fun getTerminalColorMatrix(isSystemActive: Boolean): ColorMatrix {
     return if (isSystemActive) {
-        // Зеленый режим (TerminalGreen)
         ColorMatrix(floatArrayOf(
             0f, 0.5f, 0f, 0f, 0f,
             0f, 1f,   0f, 0f, 0f,
@@ -625,13 +636,11 @@ fun getTerminalColorMatrix(isSystemActive: Boolean): ColorMatrix {
             0f, 0f,   0f, 1f, 0f
         ))
     } else {
-        // Красный режим (TerminalRed)
-        // Берем 100% яркости из зеленого канала и направляем в КРАСНЫЙ выход
         ColorMatrix(floatArrayOf(
-            0f, 1f,   0f, 0f, 0f, // Red выход получает данные из Green канала
-            0f, 0f,   0f, 0f, 0f, // Green выход пустой
-            0f, 0f,   0f, 0f, 0f, // Blue выход пустой
-            0f, 0f,   0f, 1f, 0f  // Alpha
+            0f, 1f,   0f, 0f, 0f,
+            0f, 0f,   0f, 0f, 0f,
+            0f, 0f,   0f, 0f, 0f,
+            0f, 0f,   0f, 1f, 0f
         ))
     }
 }
