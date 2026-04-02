@@ -5,6 +5,7 @@ import android.graphics.*
 import android.view.View
 import android.view.WindowManager
 import android.content.Intent
+import android.os.Build
 import java.util.*
 
 class BlockerManager(private val context: Context) {
@@ -21,9 +22,15 @@ class BlockerManager(private val context: Context) {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+            gravity = android.view.Gravity.TOP
+        }
 
         val view = MatrixBlockerView(context) {
             hideOverlay()

@@ -36,6 +36,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val prefs = application.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
     private val _isSystemActive = MutableStateFlow(prefs.getBoolean("system_active", true))
     val isSystemActive: StateFlow<Boolean> = _isSystemActive
+    private val appNamesCache = mutableMapOf<String, String>()
 
 
     val appLimits: StateFlow<List<AppUsageEntity>> = dao.getAllLimits()
@@ -50,13 +51,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         val existingPackages = limits.map { it.packageName }.toSet()
 
-        apps.filter { app ->
-            val isNotAdded = !existingPackages.contains(app.packageName)
-
-            val matchesQuery = if (query.isBlank()) true
-            else getAppName(app.packageName).contains(query, ignoreCase = true)
-
-            isNotAdded && matchesQuery
+        if (query.isBlank()) {
+            apps.filter { !existingPackages.contains(it.packageName) }
+        } else {
+            val lowerQuery = query.lowercase()
+            apps.filter { app ->
+                val isNotAdded = !existingPackages.contains(app.packageName)
+                val name = appNamesCache[app.packageName] ?: app.packageName
+                val matchesQuery = name.lowercase().contains(lowerQuery)
+                isNotAdded && matchesQuery
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -85,13 +89,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
                 .filter { app ->
                     val hasLauncher = packageManager.getLaunchIntentForPackage(app.packageName) != null
-                    //val isNotSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0
-                    val isNotMe = app.packageName != myPackageName
-
-                    isNotMe && hasLauncher
+                    app.packageName != myPackageName && hasLauncher
                 }
-                .sortedBy { getAppName(it.packageName) }
-            _installedApps.value = apps
+            apps.forEach { app ->
+                if (!appNamesCache.containsKey(app.packageName)) {
+                    appNamesCache[app.packageName] = packageManager.getApplicationLabel(app).toString()
+                }
+            }
+
+            _installedApps.value = apps.sortedBy { appNamesCache[it.packageName] ?: it.packageName }
         }
     }
 
@@ -149,9 +155,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun getAppName(packageName: String): String {
-        return try {
+        return appNamesCache[packageName] ?: try {
             val info = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(info).toString()
+            val name = packageManager.getApplicationLabel(info).toString()
+            appNamesCache[packageName] = name
+            name
         } catch (_: Exception) {
             packageName
         }

@@ -204,11 +204,18 @@ fun DashboardContent(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("> SYSTEM_STATE: [ ")
+                        append("> SYSTEM_STATE: ")
+                        val stateText = if (isSystemActive) "ON" else "OFF"
+
                         withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
-                            append(if (isSystemActive) "ON" else "OFF")
+                            append(">> ")
                         }
-                        append(" ]")
+                        withStyle(style = SpanStyle(color = activeColor)) {
+                            append(stateText)
+                        }
+                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                            append(" <<")
+                        }
                     },
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
@@ -232,19 +239,6 @@ fun DashboardContent(
                 )
             }
         },
-        floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                ExtendedFloatingActionButton(
-                    onClick = onAddClick,
-                    shape = RectangleShape,
-                    icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("ДОБАВИТЬ") },
-                    contentColor = activeColor,
-                    modifier = Modifier.border(1.dp, activeColor, RectangleShape),
-                    containerColor = TerminalBackground
-                )
-            }
-        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -286,6 +280,12 @@ fun DashboardContent(
                             )
                         }
                     }
+                    item {
+                        AddNewModuleItem(
+                            onClick = onAddClick,
+                            activeColor = activeColor
+                        )
+                    }
                 }
             }
         }
@@ -304,6 +304,18 @@ fun AppLimitItem(
     activeColor: Color,
     isSystemActive: Boolean
 ) {
+    val usedMin = usedMs / 1000 / 60
+    val infiniteTransition = rememberInfiniteTransition(label = "BorderBlink")
+    val borderAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "BorderAlpha"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -312,7 +324,7 @@ fun AppLimitItem(
         shape = RectangleShape,
         border = BorderStroke(
             width = 1.dp,
-            color = activeColor
+            color = if (usedMin >= minutes) activeColor.copy(alpha = borderAlpha) else activeColor
         ),
         colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
@@ -405,9 +417,13 @@ fun AppSelectionDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxHeight(0.8f)) {
+                var localSearchQuery by remember { mutableStateOf("") }
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchChange,
+                    value = localSearchQuery,
+                    onValueChange = {
+                        localSearchQuery = it
+                        onSearchChange(it)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
@@ -470,6 +486,38 @@ fun AppSelectionDialog(
             }
         }
     )
+}
+
+
+@Composable
+fun AddNewModuleItem(
+    onClick: () -> Unit,
+    activeColor: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+            .clickable { onClick() },
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, activeColor),
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "[ + ADD_NEW_MODULE ]",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
 }
 
 
