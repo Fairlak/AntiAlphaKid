@@ -9,11 +9,23 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import ru.fairlak.antialphakid.core.ui.theme.AntiAlphaKidTheme
 import ru.fairlak.antialphakid.features.dashboard.ui.DashboardScreen
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
+import ru.fairlak.antialphakid.features.settings.ui.SettingsScreen
+import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,16 +45,46 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AntiAlphaKidTheme {
-                DashboardScreen(
-                    onManagePermissions = {
-                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                val navController = rememberNavController()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.Black
+                ) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = "dashboard",
+                        enterTransition = { androidx.compose.animation.EnterTransition.None },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None }
+                    ) {
+                        composable("dashboard") {
+                            DashboardScreen(
+                                onManagePermissions = {
+                                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
-                            val intentOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                            startActivity(intentOverlay)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(
+                                            this@MainActivity
+                                        )
+                                    ) {
+                                        val intentOverlay =
+                                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                        startActivity(intentOverlay)
+                                    }
+                                },
+                                onOpenSettings = {
+                                    navController.navigate("settings") {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                     }
-                )
+                }
             }
         }
     }

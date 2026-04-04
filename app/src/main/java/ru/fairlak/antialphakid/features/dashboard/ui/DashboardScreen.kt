@@ -46,12 +46,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -64,7 +66,8 @@ private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.bac
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(),
-    onManagePermissions: () -> Unit
+    onManagePermissions: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -155,6 +158,7 @@ fun DashboardScreen(
             isSystemActive = isSystemActive,
             onToggleSystem = { viewModel.toggleSystemState() },
             activeColor = activeColor,
+            onOpenSettings = onOpenSettings
         )
     }
 }
@@ -172,6 +176,7 @@ fun DashboardContent(
     isSystemActive: Boolean,
     onToggleSystem: () -> Unit,
     activeColor: Color,
+    onOpenSettings: () -> Unit
 ) {
 
     val infiniteTransition = rememberInfiniteTransition(label = "Blink")
@@ -202,37 +207,53 @@ fun DashboardContent(
                     )
                 )
 
-                Text(
-                    text = buildAnnotatedString {
-                        append("> SYSTEM_STATE: ")
-                        val stateText = if (isSystemActive) "ON" else "OFF"
-
-                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
-                            append(">> ")
-                        }
-                        withStyle(style = SpanStyle(color = activeColor)) {
-                            append(stateText)
-                        }
-                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
-                            append(" <<")
-                        }
-                    },
-                    color = activeColor,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-
-                    textAlign = TextAlign.End,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "[ SETTINGS ]",
+                        color = activeColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onOpenSettings()
+                        }
+                    )
+
+                    Text(
+                        text = buildAnnotatedString {
+                            append("> SYSTEM_MODE: ")
+                            val stateText = if (isSystemActive) "ON" else "OFF"
+
+                            withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                                append(">> ")
+                            }
+                            withStyle(style = SpanStyle(color = activeColor)) {
+                                append(stateText)
+                            }
+                            withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                                append(" <<")
+                            }
+                        },
+                        color = activeColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
                             onToggleSystem()
                         }
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 20.dp)
-                )
+                    )
+                }
                 HorizontalDivider(
                     thickness = 1.dp,
                     color = activeColor
@@ -254,13 +275,28 @@ fun DashboardContent(
             )
 
             if (limits.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Список пуст. Добавьте лимит.", color = MaterialTheme.colorScheme.primary)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Список пуст. Добавьте лимит.",
+                        color = activeColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    AddNewModuleItem(
+                        onClick = onAddClick,
+                        activeColor = activeColor
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 100.dp)
+                    contentPadding = PaddingValues(bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(limits, { it.packageName }) { item ->
                         val usedMs = usageStats?.get(item.packageName)
@@ -362,10 +398,10 @@ fun AppLimitItem(
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
                     contentDescription = "Удалить",
                     tint = activeColor,
-                    modifier = Modifier.size(32.dp))
+                    modifier = Modifier.size(40.dp))
             }
         }
     }
@@ -611,7 +647,7 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(TerminalBackground)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {

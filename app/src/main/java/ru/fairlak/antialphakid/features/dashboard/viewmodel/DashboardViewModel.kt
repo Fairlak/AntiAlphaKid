@@ -2,8 +2,10 @@ package ru.fairlak.antialphakid.features.dashboard.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import kotlinx.coroutines.flow.combine
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +22,7 @@ import kotlinx.coroutines.launch
 import ru.fairlak.antialphakid.core.database.AppDatabase
 import ru.fairlak.antialphakid.core.database.AppUsageEntity
 import ru.fairlak.antialphakid.features.monitor.data.AppDetector
+import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 import kotlin.text.contains
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -81,6 +84,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val newState = !_isSystemActive.value
         _isSystemActive.value = newState
         prefs.edit().putBoolean("system_active", newState).apply()
+
+        val intent = Intent(getApplication(), MonitoringService::class.java)
+        if (newState) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getApplication<Application>().startForegroundService(intent)
+            } else {
+                getApplication<Application>().startService(intent)
+            }
+        } else {
+            getApplication<Application>().stopService(intent)
+        }
     }
 
     private fun loadInstalledApps() {
