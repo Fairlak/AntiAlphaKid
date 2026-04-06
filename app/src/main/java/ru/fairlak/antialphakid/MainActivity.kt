@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ru.fairlak.antialphakid.core.ui.theme.AntiAlphaKidTheme
 import ru.fairlak.antialphakid.features.dashboard.ui.DashboardScreen
+import ru.fairlak.antialphakid.features.dashboard.ui.hasUsageStatsPermission
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 import ru.fairlak.antialphakid.features.settings.ui.SettingsScreen
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
@@ -59,15 +60,18 @@ class MainActivity : ComponentActivity() {
                         composable("dashboard") {
                             DashboardScreen(
                                 onManagePermissions = {
-                                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                                    val hasUsageStats = hasUsageStatsPermission(this@MainActivity)
+                                    val hasOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                        Settings.canDrawOverlays(this@MainActivity)
+                                    } else true
 
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(
-                                            this@MainActivity
-                                        )
-                                    ) {
-                                        val intentOverlay =
-                                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                        startActivity(intentOverlay)
+                                    if (!hasUsageStats) {
+                                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                                    } else if (!hasOverlay) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                            val intentOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                            startActivity(intentOverlay)
+                                        }
                                     }
                                 },
                                 onOpenSettings = {

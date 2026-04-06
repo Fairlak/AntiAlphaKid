@@ -7,6 +7,7 @@ import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Process
+import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
 
 private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
@@ -72,14 +74,16 @@ fun DashboardScreen(
     val context = LocalContext.current
 
     var isPermissionGranted by remember {
-        mutableStateOf(hasUsageStatsPermission(context))
+        mutableStateOf(
+            hasUsageStatsPermission(context) && hasOverlayPermission(context)
+        )
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                isPermissionGranted = hasUsageStatsPermission(context)
+                isPermissionGranted = hasUsageStatsPermission(context) && hasOverlayPermission(context)
                 viewModel.updateUsageStats()
             }
         }
@@ -87,7 +91,7 @@ fun DashboardScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     if (!isPermissionGranted) {
-        PermissionRequiredScreen(onManagePermissions)
+        PermissionRequiredScreen(onSafeClick = onManagePermissions)
     } else {
 
         val limits by viewModel.appLimits.collectAsState()
@@ -641,39 +645,127 @@ fun EditLimitDialog(
     )
 }
 
-
 @Composable
 fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var hasUsage by remember { mutableStateOf(hasUsageStatsPermission(context)) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasUsage = hasUsageStatsPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val headerText = if (!hasUsage) "> SYSTEM ERROR: ACCESS_DENIED" else "> SYSTEM WARNING: OVERLAY_REQUIRED"
+    val descriptionText = if (!hasUsage) {
+        "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыто ваше приложение."
+    } else {
+        "Доступ к статистике получен. Теперь необходимо разрешить наложение поверх окон, чтобы система могла блокировать экран."
+    }
+    val buttonText = if (!hasUsage) "[ ПРЕДОСТАВИТЬ ДОСТУП ]" else "[ РАЗРЕШИТЬ НАЛОЖЕНИЕ ]"
+
+    var showDescription by remember(headerText) { mutableStateOf(false) }
+    var showButton by remember(headerText) { mutableStateOf(false) }
+
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TerminalBackground)
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "> SYSTEM ERROR: ACCESS_DENIED",
+        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+            TypingText(
+                text = headerText,
+                key = headerText,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
                 color = TerminalGreen,
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.headlineSmall
+                delayMillis = 40,
+                onFinished = { showDescription = true }
             )
+
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыто ваше приложение.",
-                color = TerminalGreen,
-                fontFamily = FontFamily.Monospace,
-                textAlign = TextAlign.Center
-            )
+
+            Box(modifier = Modifier.heightIn(min = 120.dp)) {
+                if (showDescription) {
+                    TypingText(
+                        text = descriptionText,
+                        key = descriptionText,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp),
+                        color = TerminalGreen,
+                        delayMillis = 15,
+                        onFinished = { showButton = true }
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = onSafeClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-            ) {
-                Text("[ ПРЕДОСТАВИТЬ ДОСТУП ]", color = TerminalGreen, fontFamily = FontFamily.Monospace)
+
+            if (showButton) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    OutlinedButton(
+                        onClick = onSafeClick,
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, TerminalGreen),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TerminalGreen),
+                        modifier = Modifier.wrapContentWidth().height(56.dp),
+                        contentPadding = PaddingValues(horizontal = 48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            Text(
+                                text = buttonText,
+                                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.Transparent
+                            )
+                            TypingText(
+                                text = buttonText,
+                                key = buttonText,
+                                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                color = TerminalGreen,
+                                delayMillis = 50,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+fun TypingText(
+    text: String,
+    key: Any? = null,
+    style: TextStyle,
+    color: Color,
+    textAlign: TextAlign = TextAlign.Start,
+    delayMillis: Long = 30,
+    onFinished: () -> Unit = {}
+) {
+    var displayedText by remember(key) { mutableStateOf("") }
+
+    LaunchedEffect(key, text) {
+        displayedText = ""
+        text.forEachIndexed { index, _ ->
+            displayedText = text.substring(0, index + 1)
+            delay(delayMillis)
+        }
+        onFinished()
+    }
+
+    Text(
+        text = displayedText,
+        style = style,
+        color = color,
+        textAlign = textAlign,
+        fontFamily = FontFamily.Monospace,
+        softWrap = true
+    )
 }
 
 fun hasUsageStatsPermission(context: Context): Boolean {
@@ -692,6 +784,12 @@ fun hasUsageStatsPermission(context: Context): Boolean {
         )
     }
     return mode == AppOpsManager.MODE_ALLOWED
+}
+
+fun hasOverlayPermission(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        Settings.canDrawOverlays(context)
+    } else true
 }
 
 fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
@@ -729,6 +827,40 @@ fun getTerminalColorMatrix(isSystemActive: Boolean): ColorMatrix {
     }
 }
 
+@Composable
+fun TypingText(
+    text: String,
+    key: Any? = null, // Добавляем ключ
+    modifier: Modifier = Modifier,
+    style: TextStyle,
+    color: Color,
+    textAlign: TextAlign = TextAlign.Start,
+    delayMillis: Long = 30,
+    startDelay: Long = 0,
+    onFinished: () -> Unit = {}
+) {
+    // remember(key) очистит переменную, как только ключ изменится
+    var displayedText by remember(key) { mutableStateOf("") }
+
+    LaunchedEffect(key, text) {
+        displayedText = "" // Принудительно очищаем
+        delay(startDelay)
+        text.forEachIndexed { index, _ ->
+            displayedText = text.substring(0, index + 1)
+            delay(delayMillis)
+        }
+        onFinished()
+    }
+
+    Text(
+        text = displayedText,
+        modifier = modifier,
+        style = style,
+        color = color,
+        textAlign = textAlign,
+        fontFamily = FontFamily.Monospace
+    )
+}
 
 
 @Composable
