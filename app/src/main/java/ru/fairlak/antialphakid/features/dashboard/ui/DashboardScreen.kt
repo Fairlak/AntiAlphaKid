@@ -801,7 +801,7 @@ fun AppLockScreen(
                     text = subText,
                     key = subText,
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
-                    color = TerminalGreen.copy(alpha = 0.7f),
+                    color = TerminalGreen,
                     delayMillis = 20
                 )
 

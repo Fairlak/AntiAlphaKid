@@ -47,6 +47,8 @@ fun SettingsScreen(
     var showPassDialog by remember { mutableStateOf(false) }
     var isVerifyingOldPassword by remember { mutableStateOf(false) }
     var isVerifyingForDelete by remember { mutableStateOf(false) }
+    val blockerText by viewModel.blockerText.collectAsState()
+    var showBlockerTextDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -118,9 +120,9 @@ fun SettingsScreen(
 
             item {
                 SettingsModuleItem(
-                    label = "> BLOCKER_TEXT: Лимит исчерпан",
+                    label = "> BLOCKER_TEXT: $blockerText",
                     activeColor = activeColor,
-                    onClick = {  }
+                    onClick = { showBlockerTextDialog = true }
                 )
             }
 
@@ -166,6 +168,19 @@ fun SettingsScreen(
                     showPassDialog = false
                 },
                 onDismiss = { showPassDialog = false },
+                activeColor = activeColor
+            )
+        }
+
+        if (showBlockerTextDialog) {
+            TextInputDialog(
+                title = "BLOCKER_TEXT",
+                initialText = blockerText,
+                onConfirm = { newText ->
+                    viewModel.updateBlockerText(newText)
+                    showBlockerTextDialog = false
+                },
+                onDismiss = { showBlockerTextDialog = false },
                 activeColor = activeColor
             )
         }
@@ -280,6 +295,61 @@ fun PasswordInputDialog(
                     .padding(8.dp),
                 fontFamily = FontFamily.Monospace
             )
+        }
+    )
+}
+
+@Composable
+fun TextInputDialog(
+    title: String,
+    initialText: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    activeColor: Color
+) {
+    var text by remember { mutableStateOf(initialText) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        shape = RectangleShape,
+        modifier = Modifier.border(1.dp, activeColor),
+        title = {
+            Text(text = "> $title", color = activeColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                TextField(
+                    value = text,
+                    onValueChange = { if (it.length <= 60) text = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Black,
+                        unfocusedContainerColor = Color.Black,
+                        focusedTextColor = activeColor,
+                        unfocusedTextColor = activeColor,
+                        cursorColor = activeColor,
+                        focusedIndicatorColor = activeColor,
+                        unfocusedIndicatorColor = activeColor
+                    ),
+                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
+                    singleLine = false,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "${text.length}/60",
+                    color = activeColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Text(text = "[ CONFIRM ]", color = activeColor, modifier = Modifier.clickable { onConfirm(text) }.padding(8.dp), fontFamily = FontFamily.Monospace)
+        },
+        dismissButton = {
+            Text(text = "[ CANCEL ]", color = activeColor, modifier = Modifier.clickable { onDismiss() }.padding(8.dp), fontFamily = FontFamily.Monospace)
         }
     )
 }

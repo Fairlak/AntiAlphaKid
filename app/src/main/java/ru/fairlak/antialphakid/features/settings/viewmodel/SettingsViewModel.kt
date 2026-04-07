@@ -16,11 +16,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val isNotificEnabled: StateFlow<Boolean> = _isNotificEnabled
     private val _hasPassword = MutableStateFlow(!prefs.getString("app_password", null).isNullOrEmpty())
     val hasPassword: StateFlow<Boolean> = _hasPassword
+    private val _blockerText = MutableStateFlow(prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН")
+    val blockerText: StateFlow<String> = _blockerText
 
     fun refreshState() {
         _isSystemActive.value = prefs.getBoolean("system_active", true)
         _isNotificEnabled.value = prefs.getBoolean("notifications_enabled", true)
         _hasPassword.value = !prefs.getString("app_password", null).isNullOrEmpty()
+        _blockerText.value = prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН"
     }
 
     fun toggleNotifications() {
@@ -42,5 +45,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun clearPassword() {
         prefs.edit().remove("app_password").apply()
         _hasPassword.value = false
+    }
+
+    fun updateBlockerText(newText: String) {
+        if (newText.isNotBlank()) {
+            prefs.edit().putString("blocker_text", newText).apply()
+            _blockerText.value = newText
+        }
     }
 }

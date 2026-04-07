@@ -6,6 +6,8 @@ import android.view.View
 import android.view.WindowManager
 import android.content.Intent
 import android.os.Build
+import android.text.StaticLayout
+import android.text.TextPaint
 import java.util.*
 
 class BlockerManager(private val context: Context) {
@@ -123,17 +125,45 @@ class BlockerManager(private val context: Context) {
         }
 
         private fun drawOverlayText(canvas: Canvas) {
-            val centerPaint = Paint().apply {
+            val prefs = context.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
+            val customText = prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН"
+
+            val textPaint = TextPaint().apply {
                 color = Color.GREEN
                 textSize = 70f
-                textAlign = Paint.Align.CENTER
-                typeface = Typeface.DEFAULT_BOLD
+                typeface = Typeface.MONOSPACE
                 isFakeBoldText = true
                 setShadowLayer(10f, 0f, 0f, Color.GREEN)
+                textAlign = Paint.Align.LEFT
             }
-            canvas.drawText("ЛИМИТ ИСЧЕРПАН", width / 2f, height / 2f, centerPaint)
-            centerPaint.textSize = 50f
-            canvas.drawText("[ ЗАКРЫТЬ ]", width / 2f, height / 2f + 150f, centerPaint)
+
+            val maxWidth = (width * 0.8f).toInt()
+
+            val staticLayout = StaticLayout.Builder.obtain(customText, 0, customText.length, textPaint, maxWidth)
+                .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+                .setLineSpacing(0f, 1.2f)
+                .build()
+
+            canvas.save()
+
+            val x = (width - maxWidth) / 2f
+            val y = height / 2f - (staticLayout.height / 2f)
+
+            canvas.translate(x, y)
+            staticLayout.draw(canvas)
+            canvas.restore()
+
+            val buttonPaint = Paint(textPaint).apply {
+                textSize = 65f
+                textAlign = Paint.Align.CENTER
+                alpha = 200
+            }
+            canvas.drawText(
+                "[ ЗАКРЫТЬ ]",
+                width / 2f,
+                height / 2f + (staticLayout.height / 2f) + 200f,
+                buttonPaint
+            )
         }
 
         init {
