@@ -42,7 +42,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
@@ -52,6 +54,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
@@ -60,6 +64,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
+import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
 
 private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
 private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
@@ -68,102 +73,112 @@ private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.bac
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
     onManagePermissions: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
+    val hasPassword by settingsViewModel.hasPassword.collectAsState()
+    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
-    var isPermissionGranted by remember {
-        mutableStateOf(
-            hasUsageStatsPermission(context) && hasOverlayPermission(context)
+    if (hasPassword && !isAuthenticated) {
+        AppLockScreen(
+            viewModel = settingsViewModel,
+            onCorrectPassword = { isAuthenticated = true }
         )
-    }
+    } else {
+        var isPermissionGranted by remember {
+            mutableStateOf(hasUsageStatsPermission(context) && hasOverlayPermission(context))
+        }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isPermissionGranted = hasUsageStatsPermission(context) && hasOverlayPermission(context)
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isPermissionGranted =
+                        hasUsageStatsPermission(context) && hasOverlayPermission(context)
+                    viewModel.updateUsageStats()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
+        if (!isPermissionGranted) {
+            PermissionRequiredScreen(onSafeClick = onManagePermissions)
+        } else {
+
+            val limits by viewModel.appLimits.collectAsState()
+            val filteredApps by viewModel.filteredApps.collectAsState()
+            val searchQuery by viewModel.searchQuery.collectAsState()
+            val usageStats by viewModel.usageStats.collectAsState()
+            val isSystemActive by viewModel.isSystemActive.collectAsState()
+            val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
+
+            val showDialog = remember { mutableStateOf(false) }
+            var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
+
+            LaunchedEffect(Unit) {
                 viewModel.updateUsageStats()
             }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    if (!isPermissionGranted) {
-        PermissionRequiredScreen(onSafeClick = onManagePermissions)
-    } else {
 
-        val limits by viewModel.appLimits.collectAsState()
-        val filteredApps by viewModel.filteredApps.collectAsState()
-        val searchQuery by viewModel.searchQuery.collectAsState()
-        val usageStats by viewModel.usageStats.collectAsState()
-        val isSystemActive by viewModel.isSystemActive.collectAsState()
-        val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
-
-        val showDialog = remember { mutableStateOf(false) }
-        var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
-
-        LaunchedEffect(Unit) {
-            viewModel.updateUsageStats()
-        }
-
-        DisposableEffect(Unit) {
-            viewModel.startStatsUpdates()
-            onDispose {
-                viewModel.stopStatsUpdates()
+            DisposableEffect(Unit) {
+                viewModel.startStatsUpdates()
+                onDispose {
+                    viewModel.stopStatsUpdates()
+                }
             }
-        }
 
-        if (showDialog.value) {
-            AppSelectionDialog(
-                installedApps = filteredApps,
-                searchQuery = searchQuery,
-                onSearchChange = { viewModel.onSearchQueryChange(it) },
+            if (showDialog.value) {
+                AppSelectionDialog(
+                    installedApps = filteredApps,
+                    searchQuery = searchQuery,
+                    onSearchChange = { viewModel.onSearchQueryChange(it) },
+                    getAppName = { viewModel.getAppName(it) },
+                    getAppIcon = { viewModel.getAppIcon(it) },
+                    onAppSelected = { pkg ->
+                        viewModel.saveLimit(pkg, 30)
+                        showDialog.value = false
+                        viewModel.onSearchQueryChange("")
+                    },
+                    onDismiss = {
+                        showDialog.value = false
+                        viewModel.onSearchQueryChange("")
+                    },
+                    activeColor = activeColor,
+                    isSystemActive = isSystemActive
+
+                )
+            }
+
+            editingEntity.value?.let { entity ->
+                EditLimitDialog(
+                    appName = viewModel.getAppName(entity.packageName),
+                    currentLimit = entity.limitMinutes,
+                    onConfirm = { newMinutes ->
+                        viewModel.saveLimit(entity.packageName, newMinutes)
+                        editingEntity.value = null
+                    },
+                    onDismiss = { editingEntity.value = null },
+                    activeColor = activeColor
+                )
+            }
+
+
+            DashboardContent(
+                limits = limits,
                 getAppName = { viewModel.getAppName(it) },
+                usageStats = usageStats,
                 getAppIcon = { viewModel.getAppIcon(it) },
-                onAppSelected = { pkg ->
-                    viewModel.saveLimit(pkg, 30)
-                    showDialog.value = false
-                    viewModel.onSearchQueryChange("")
-                },
-                onDismiss = {
-                    showDialog.value = false
-                    viewModel.onSearchQueryChange("")
-                },
+                onDelete = { viewModel.removeLimit(it) },
+                onAddClick = { showDialog.value = true },
+                onItemClick = { editingEntity.value = it },
+                isSystemActive = isSystemActive,
+                onToggleSystem = { viewModel.toggleSystemState() },
                 activeColor = activeColor,
-                isSystemActive = isSystemActive
-
+                onOpenSettings = onOpenSettings
             )
         }
-
-        editingEntity.value?.let { entity ->
-            EditLimitDialog(
-                appName = viewModel.getAppName(entity.packageName),
-                currentLimit = entity.limitMinutes,
-                onConfirm = { newMinutes ->
-                    viewModel.saveLimit(entity.packageName, newMinutes)
-                    editingEntity.value = null
-                },
-                onDismiss = { editingEntity.value = null },
-                activeColor = activeColor
-            )
-        }
-
-
-        DashboardContent(
-            limits = limits,
-            getAppName = { viewModel.getAppName(it) },
-            usageStats = usageStats,
-            getAppIcon = { viewModel.getAppIcon(it) },
-            onDelete = { viewModel.removeLimit(it) },
-            onAddClick = { showDialog.value = true },
-            onItemClick = { editingEntity.value = it },
-            isSystemActive = isSystemActive,
-            onToggleSystem = { viewModel.toggleSystemState() },
-            activeColor = activeColor,
-            onOpenSettings = onOpenSettings
-        )
     }
 }
 
@@ -674,7 +689,10 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
     var showButton by remember(headerText) { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
@@ -711,7 +729,9 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                         shape = RectangleShape,
                         border = BorderStroke(1.dp, TerminalGreen),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TerminalGreen),
-                        modifier = Modifier.wrapContentWidth().height(56.dp),
+                        modifier = Modifier
+                            .wrapContentWidth()
+                            .height(56.dp),
                         contentPadding = PaddingValues(horizontal = 48.dp)
                     ) {
                         Box(contentAlignment = Alignment.CenterStart) {
@@ -731,6 +751,126 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AppLockScreen(
+    onCorrectPassword: () -> Unit,
+    viewModel: SettingsViewModel = viewModel()
+) {
+    var passwordInput by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
+    var showInput by remember { mutableStateOf(false) }
+
+    val headerText = "> SECURITY_CHECK: DATABASE_ENCRYPTED"
+    val subText = "Введите ключ доступа для инициализации интерфейса управления..."
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TypingText(
+                text = headerText,
+                key = headerText,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = TerminalGreen,
+                delayMillis = 40,
+                onFinished = { showInput = true }
+            )
+
+            if (showInput) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TypingText(
+                    text = subText,
+                    key = subText,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+                    color = TerminalGreen.copy(alpha = 0.7f),
+                    delayMillis = 20
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                TextField(
+                    value = passwordInput,
+                    onValueChange = {
+                        passwordInput = it
+                        isError = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, if (isError) TerminalRed else TerminalGreen, RectangleShape),
+                    textStyle = TextStyle(
+                        color = if (isError) TerminalRed else TerminalGreen,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 20.sp
+                    ),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        cursorColor = TerminalGreen,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    placeholder = {
+                        Text(
+                            "PASSWORD_REQUIRED_",
+                            color = TerminalGreen.copy(alpha = 0.3f),
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                )
+
+                if (isError) {
+                    Text(
+                        text = "!! ACCESS_DENIED: INVALID_KEY !!",
+                        color = TerminalRed,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        if (viewModel.checkPassword(passwordInput)) {
+                            onCorrectPassword()
+                        } else {
+                            isError = true
+                            passwordInput = ""
+                        }
+                    },
+                    shape = RectangleShape,
+                    border = BorderStroke(1.dp, TerminalGreen),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(
+                        text = "[ INITIALIZE_LOGIN ]",
+                        color = TerminalGreen,
+                        fontFamily = FontFamily.Monospace
+                    )
                 }
             }
         }

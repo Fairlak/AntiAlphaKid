@@ -2,6 +2,7 @@ package ru.fairlak.antialphakid.features.settings.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,6 +42,11 @@ fun SettingsScreen(
     val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
 
     val isNotificationsEnabled by viewModel.isNotificEnabled.collectAsState()
+
+    val hasPassword by viewModel.hasPassword.collectAsState()
+    var showPassDialog by remember { mutableStateOf(false) }
+    var isVerifyingOldPassword by remember { mutableStateOf(false) }
+    var isVerifyingForDelete by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -95,9 +103,16 @@ fun SettingsScreen(
 
             item {
                 SettingsModuleItem(
-                    label = "[ + ADD_PASSWORD ]",
+                    label = if (hasPassword) "[ * CHANGE_PASSWORD ]" else "[ + ADD_PASSWORD ]",
                     activeColor = activeColor,
-                    onClick = {  }
+                    showTrailingIcon = hasPassword,
+                    onTrailingIconClick = {
+                        isVerifyingForDelete = true
+                    },
+                    onClick = {
+                        if (hasPassword) isVerifyingOldPassword = true
+                        else showPassDialog = true
+                    }
                 )
             }
 
@@ -117,6 +132,43 @@ fun SettingsScreen(
                 )
             }
         }
+        if (isVerifyingOldPassword) {
+            PasswordInputDialog(
+                title = "ENTER OLD PASSWORD",
+                onConfirm = { input ->
+                    if (viewModel.checkPassword(input)) {
+                        isVerifyingOldPassword = false
+                        showPassDialog = true
+                    }
+                },
+                onDismiss = { isVerifyingOldPassword = false },
+                activeColor = activeColor
+            )
+        }
+        if (isVerifyingForDelete) {
+            PasswordInputDialog(
+                title = "CONFIRM DELETE PASSWORD",
+                onConfirm = { input ->
+                    if (viewModel.checkPassword(input)) {
+                        viewModel.clearPassword()
+                        isVerifyingForDelete = false
+                    }
+                },
+                onDismiss = { isVerifyingForDelete = false },
+                activeColor = activeColor
+            )
+        }
+        if (showPassDialog) {
+            PasswordInputDialog(
+                title = if (hasPassword) "ENTER NEW PASSWORD" else "SET PASSWORD",
+                onConfirm = {
+                    viewModel.savePassword(it)
+                    showPassDialog = false
+                },
+                onDismiss = { showPassDialog = false },
+                activeColor = activeColor
+            )
+        }
     }
 }
 
@@ -124,6 +176,8 @@ fun SettingsScreen(
 fun SettingsModuleItem(
     label: String,
     activeColor: Color,
+    showTrailingIcon: Boolean = false,
+    onTrailingIconClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Card(
@@ -135,21 +189,97 @@ fun SettingsModuleItem(
             ) { onClick() },
         shape = RectangleShape,
         border = BorderStroke(1.dp, activeColor),
-        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+        colors = CardDefaults.cardColors(containerColor = Color.Black)
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp)
                 .fillMaxWidth(),
-            contentAlignment = Alignment.CenterStart
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = label,
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
+
+            if (showTrailingIcon) {
+                Icon(
+                    painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
+                    contentDescription = "Delete",
+                    tint = activeColor,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { onTrailingIconClick?.invoke() }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun PasswordInputDialog(
+    title: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    activeColor: Color
+) {
+    var text by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = TerminalBackground,
+        shape = RectangleShape,
+        modifier = Modifier.border(1.dp, activeColor),
+        title = {
+            Text(
+                text = "> $title",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = TerminalBackground,
+                    unfocusedContainerColor = TerminalBackground,
+                    focusedTextColor = activeColor,
+                    unfocusedTextColor = activeColor,
+                    unfocusedIndicatorColor = activeColor,
+                    cursorColor = activeColor,
+                    focusedIndicatorColor = activeColor
+                ),
+                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Text(
+                text = "[ CONFIRM ]",
+                color = activeColor,
+                modifier = Modifier
+                    .clickable { onConfirm(text) }
+                    .padding(8.dp),
+                fontFamily = FontFamily.Monospace
+            )
+        },
+        dismissButton = {
+            Text(
+                text = "[ CANCEL ]",
+                color = activeColor,
+                modifier = Modifier
+                    .clickable { onDismiss() }
+                    .padding(8.dp),
+                fontFamily = FontFamily.Monospace
+            )
+        }
+    )
 }
