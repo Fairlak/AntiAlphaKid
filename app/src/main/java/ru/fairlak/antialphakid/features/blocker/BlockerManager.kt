@@ -159,7 +159,7 @@ class BlockerManager(private val context: Context) {
                 alpha = 200
             }
             canvas.drawText(
-                "[ ЗАКРЫТЬ ]",
+                "[ CLOSE ]",
                 width / 2f,
                 height / 2f + (staticLayout.height / 2f) + 200f,
                 buttonPaint

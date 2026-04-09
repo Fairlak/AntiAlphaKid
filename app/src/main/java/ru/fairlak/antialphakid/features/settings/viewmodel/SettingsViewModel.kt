@@ -2,9 +2,16 @@ package ru.fairlak.antialphakid.features.settings.viewmodel
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import ru.fairlak.antialphakid.core.ui.theme.MatrixGreen
+import ru.fairlak.antialphakid.core.ui.theme.ThemeColors
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -18,12 +25,34 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val hasPassword: StateFlow<Boolean> = _hasPassword
     private val _blockerText = MutableStateFlow(prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН")
     val blockerText: StateFlow<String> = _blockerText
+    private val _onColorKey = MutableStateFlow(prefs.getString("color_on", "GREEN") ?: "GREEN")
+    val onColorKey: StateFlow<String> = _onColorKey
+    private val _offColorKey = MutableStateFlow(prefs.getString("color_off", "RED") ?: "RED")
+    val offColorKey: StateFlow<String> = _offColorKey
+
+    val activeColor: StateFlow<Color> = combine(isSystemActive, _onColorKey, _offColorKey) { active, onKey, offKey ->
+        val key = if (active) onKey else offKey
+        ThemeColors[key] ?: MatrixGreen
+    }.stateIn(viewModelScope,
+        SharingStarted.WhileSubscribed(5000), MatrixGreen)
 
     fun refreshState() {
         _isSystemActive.value = prefs.getBoolean("system_active", true)
         _isNotificEnabled.value = prefs.getBoolean("notifications_enabled", true)
         _hasPassword.value = !prefs.getString("app_password", null).isNullOrEmpty()
         _blockerText.value = prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН"
+        _onColorKey.value = prefs.getString("color_on", "GREEN") ?: "GREEN"
+        _offColorKey.value = prefs.getString("color_off", "RED") ?: "RED"
+    }
+
+    fun setOnColor(colorKey: String) {
+        prefs.edit().putString("color_on", colorKey).apply()
+        _onColorKey.value = colorKey
+    }
+
+    fun setOffColor(colorKey: String) {
+        prefs.edit().putString("color_off", colorKey).apply()
+        _offColorKey.value = colorKey
     }
 
     fun toggleNotifications() {

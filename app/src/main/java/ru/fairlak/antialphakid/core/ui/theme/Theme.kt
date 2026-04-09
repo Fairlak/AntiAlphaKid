@@ -16,6 +16,16 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = MatrixGreen
 )
 
+val ThemeColors = mapOf(
+    "GREEN" to MatrixGreen,
+    "RED" to TerminalRed,
+    "BLUE" to TerminalBlue,
+    "AMBER" to TerminalAmber,
+    "WHITE" to TerminalWhite,
+    "VIOLET" to TerminalViolet,
+    "YELLOW" to TerminalYellow
+)
+
 @Composable
 fun AntiAlphaKidTheme(
     content: @Composable () -> Unit

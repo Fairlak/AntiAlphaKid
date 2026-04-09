@@ -21,13 +21,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
 
-private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
-private val TerminalBackground = Color.Black
-
+private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -38,9 +38,6 @@ fun SettingsScreen(
         viewModel.refreshState()
     }
 
-    val isSystemActive by viewModel.isSystemActive.collectAsState()
-    val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
-
     val isNotificationsEnabled by viewModel.isNotificEnabled.collectAsState()
 
     val hasPassword by viewModel.hasPassword.collectAsState()
@@ -49,6 +46,11 @@ fun SettingsScreen(
     var isVerifyingForDelete by remember { mutableStateOf(false) }
     val blockerText by viewModel.blockerText.collectAsState()
     var showBlockerTextDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+
+    val activeColor by viewModel.activeColor.collectAsState()
+    val onColorKey by viewModel.onColorKey.collectAsState()
+    val offColorKey by viewModel.offColorKey.collectAsState()
 
     Scaffold(
         topBar = {
@@ -133,6 +135,15 @@ fun SettingsScreen(
                     onClick = { viewModel.toggleNotifications() }
                 )
             }
+
+            item {
+                ThemeEngineModule(
+                    activeColor = activeColor,
+                    onColorKey = onColorKey,
+                    offColorKey = offColorKey,
+                    onClick = { showThemeDialog = true }
+                )
+            }
         }
         if (isVerifyingOldPassword) {
             PasswordInputDialog(
@@ -184,6 +195,21 @@ fun SettingsScreen(
                 activeColor = activeColor
             )
         }
+
+        if (showThemeDialog) {
+            Dialog(onDismissRequest = { showThemeDialog = false }) {
+                ThemePaletteDialog(
+                    currentOnKey = onColorKey,
+                    currentOffKey = offColorKey,
+                    activeColor = activeColor,
+                    onSave = { newOn, newOff ->
+                        viewModel.setOnColor(newOn)
+                        viewModel.setOffColor(newOff)
+                        showThemeDialog = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -204,7 +230,7 @@ fun SettingsModuleItem(
             ) { onClick() },
         shape = RectangleShape,
         border = BorderStroke(1.dp, activeColor),
-        colors = CardDefaults.cardColors(containerColor = Color.Black)
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
         Row(
             modifier = Modifier
@@ -235,6 +261,34 @@ fun SettingsModuleItem(
         }
     }
 }
+
+@Composable
+fun ThemeEngineModule(
+    activeColor: Color,
+    onColorKey: String,
+    offColorKey: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, activeColor),
+        colors = CardDefaults.cardColors(containerColor = Color.Black)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("> THEME_ENGINE", color = activeColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("MODE 'ON'  COLOR: [ < $onColorKey > ]", color = activeColor, fontFamily = FontFamily.Monospace)
+            Text("MODE 'OFF' COLOR: [ < $offColorKey > ]", color = activeColor, fontFamily = FontFamily.Monospace)
+        }
+    }
+}
+
 
 @Composable
 fun PasswordInputDialog(
@@ -311,7 +365,7 @@ fun TextInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color.Black,
+        containerColor = TerminalBackground,
         shape = RectangleShape,
         modifier = Modifier.border(1.dp, activeColor),
         title = {
@@ -323,8 +377,8 @@ fun TextInputDialog(
                     value = text,
                     onValueChange = { if (it.length <= 60) text = it },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Black,
-                        unfocusedContainerColor = Color.Black,
+                        focusedContainerColor = TerminalBackground,
+                        unfocusedContainerColor = TerminalBackground,
                         focusedTextColor = activeColor,
                         unfocusedTextColor = activeColor,
                         cursorColor = activeColor,
@@ -341,15 +395,101 @@ fun TextInputDialog(
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
-                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
                 )
             }
         },
         confirmButton = {
-            Text(text = "[ CONFIRM ]", color = activeColor, modifier = Modifier.clickable { onConfirm(text) }.padding(8.dp), fontFamily = FontFamily.Monospace)
+            Text(text = "[ CONFIRM ]", color = activeColor, modifier = Modifier
+                .clickable { onConfirm(text) }
+                .padding(8.dp), fontFamily = FontFamily.Monospace)
         },
         dismissButton = {
-            Text(text = "[ CANCEL ]", color = activeColor, modifier = Modifier.clickable { onDismiss() }.padding(8.dp), fontFamily = FontFamily.Monospace)
+            Text(text = "[ CANCEL ]", color = activeColor, modifier = Modifier
+                .clickable { onDismiss() }
+                .padding(8.dp), fontFamily = FontFamily.Monospace)
         }
     )
+}
+
+@Composable
+fun ThemePaletteDialog(
+    currentOnKey: String,
+    currentOffKey: String,
+    activeColor: Color,
+    onSave: (String, String) -> Unit
+) {
+    var selectedOn by remember { mutableStateOf(currentOnKey) }
+    var selectedOff by remember { mutableStateOf(currentOffKey) }
+    val colorOptions = listOf("GREEN", "RED", "BLUE", "AMBER", "WHITE", "VIOLET", "YELLOW")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(0.95f)
+            .border(1.dp, activeColor)
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        Column {
+            Text(
+                text = "> THEME_PALETTE_SETUP",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = activeColor)
+
+            Text(text = "[ ACTIVE_SHIELD_COLOR ]", color = activeColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            colorOptions.forEach { key ->
+                val isActive = selectedOn == key
+                Text(
+                    text = if (isActive) "> $key (Active)" else "  $key",
+                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.5f),
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedOn = key }
+                        .padding(vertical = 4.dp)
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+
+            Text(text = "[ INACTIVE_SYSTEM_COLOR ]", color = activeColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            colorOptions.forEach { key ->
+                val isActive = selectedOff == key
+                Text(
+                    text = if (isActive) "> $key (Active)" else "  $key",
+                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.5f),
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedOff = key }
+                        .padding(vertical = 4.dp)
+                )
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = activeColor)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSave(selectedOn, selectedOff) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "[ SAVE_AND_EXIT ]",
+                    color = activeColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+        }
+    }
 }

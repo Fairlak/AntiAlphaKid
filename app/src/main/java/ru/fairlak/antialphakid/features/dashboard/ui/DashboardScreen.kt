@@ -287,7 +287,7 @@ fun DashboardContent(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Лимиты приложений",
+                text = "Application limits",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(vertical = 16.dp),
                 color = activeColor
@@ -300,7 +300,7 @@ fun DashboardContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Список пуст. Добавьте лимит.",
+                        text = "The list is empty. Add a limit.",
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 18.sp,
@@ -465,7 +465,7 @@ fun AppSelectionDialog(
         },
         title = {
             Text(
-                text = "Выберите приложение",
+                text = "Select an application",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace
             )
@@ -594,7 +594,7 @@ fun EditLimitDialog(
         shape = RectangleShape,
         title = {
             Text(
-                text = "> РЕДАКТИРОВАТЬ: $appName",
+                text = "> EDIT: $appName",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.titleLarge
@@ -603,7 +603,7 @@ fun EditLimitDialog(
         text = {
             Column {
                 Text(
-                    text = "Введите новый лимит (мин):",
+                    text = "Enter new limit (min):",
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -642,7 +642,7 @@ fun EditLimitDialog(
                 ),
                 modifier = Modifier.border(1.dp, activeColor, RectangleShape)
             ) {
-                Text("СОХРАНИТЬ", fontFamily = FontFamily.Monospace)
+                Text("SAVE", fontFamily = FontFamily.Monospace)
             }
         },
         dismissButton = {
@@ -651,7 +651,7 @@ fun EditLimitDialog(
                 shape = RectangleShape
             ) {
                 Text(
-                    "ОТМЕНА",
+                    "CANCEL",
                     color = activeColor.copy(alpha = 0.7f),
                     fontFamily = FontFamily.Monospace
                 )
@@ -768,7 +768,7 @@ fun AppLockScreen(
     var showInput by remember { mutableStateOf(false) }
 
     val headerText = "> SECURITY_CHECK: DATABASE_ENCRYPTED"
-    val subText = "Введите ключ доступа для инициализации интерфейса управления..."
+    val subText = "Enter the access key to initialize the management interface..."
 
     Box(
         modifier = Modifier
