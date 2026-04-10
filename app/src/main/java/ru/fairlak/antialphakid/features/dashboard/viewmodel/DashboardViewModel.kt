@@ -36,9 +36,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val searchQuery: StateFlow<String> = _searchQuery
 
     private val _installedApps = MutableStateFlow<List<ApplicationInfo>>(emptyList())
-    private val prefs = application.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
-    private val _isSystemActive = MutableStateFlow(prefs.getBoolean("system_active", true))
-    val isSystemActive: StateFlow<Boolean> = _isSystemActive
     private val appNamesCache = mutableMapOf<String, String>()
 
 
@@ -77,23 +74,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     _usageStats.value = emptyMap()
                 }
             }
-        }
-    }
-
-    fun toggleSystemState() {
-        val newState = !_isSystemActive.value
-        _isSystemActive.value = newState
-        prefs.edit().putBoolean("system_active", newState).apply()
-
-        val intent = Intent(getApplication(), MonitoringService::class.java)
-        if (newState) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                getApplication<Application>().startForegroundService(intent)
-            } else {
-                getApplication<Application>().startService(intent)
-            }
-        } else {
-            getApplication<Application>().stopService(intent)
         }
     }
 

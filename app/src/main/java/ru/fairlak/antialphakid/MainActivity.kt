@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AntiAlphaKidTheme {
                 val navController = rememberNavController()
+                val globalSettingsViewModel: SettingsViewModel = viewModel()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Black
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("dashboard") {
                             DashboardScreen(
+                                settingsViewModel = globalSettingsViewModel,
                                 onManagePermissions = {
                                     val hasUsageStats = hasUsageStatsPermission(this@MainActivity)
                                     val hasOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -84,6 +86,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
+                                viewModel = globalSettingsViewModel,
                                 onBack = { navController.popBackStack() }
                             )
                         }

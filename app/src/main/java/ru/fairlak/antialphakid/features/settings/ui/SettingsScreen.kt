@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -31,7 +32,7 @@ private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.bac
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = viewModel(),
+    viewModel: SettingsViewModel,
     onBack: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
@@ -278,7 +279,7 @@ fun ThemeEngineModule(
             ) { onClick() },
         shape = RectangleShape,
         border = BorderStroke(1.dp, activeColor),
-        colors = CardDefaults.cardColors(containerColor = Color.Black)
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("> THEME_ENGINE", color = activeColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
@@ -323,7 +324,11 @@ fun PasswordInputDialog(
                     unfocusedTextColor = activeColor,
                     unfocusedIndicatorColor = activeColor,
                     cursorColor = activeColor,
-                    focusedIndicatorColor = activeColor
+                    focusedIndicatorColor = activeColor,
+                    selectionColors = TextSelectionColors(
+                        handleColor = activeColor,
+                        backgroundColor = activeColor.copy(alpha = 0.3f)
+                    )
                 ),
                 textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
                 singleLine = true,
@@ -335,7 +340,10 @@ fun PasswordInputDialog(
                 text = "[ CONFIRM ]",
                 color = activeColor,
                 modifier = Modifier
-                    .clickable { onConfirm(text) }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onConfirm(text) }
                     .padding(8.dp),
                 fontFamily = FontFamily.Monospace
             )
@@ -345,7 +353,10 @@ fun PasswordInputDialog(
                 text = "[ CANCEL ]",
                 color = activeColor,
                 modifier = Modifier
-                    .clickable { onDismiss() }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onDismiss() }
                     .padding(8.dp),
                 fontFamily = FontFamily.Monospace
             )
@@ -383,7 +394,11 @@ fun TextInputDialog(
                         unfocusedTextColor = activeColor,
                         cursorColor = activeColor,
                         focusedIndicatorColor = activeColor,
-                        unfocusedIndicatorColor = activeColor
+                        unfocusedIndicatorColor = activeColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = activeColor,
+                            backgroundColor = activeColor.copy(alpha = 0.3f)
+                        )
                     ),
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
                     singleLine = false,
@@ -403,12 +418,18 @@ fun TextInputDialog(
         },
         confirmButton = {
             Text(text = "[ CONFIRM ]", color = activeColor, modifier = Modifier
-                .clickable { onConfirm(text) }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onConfirm(text) }
                 .padding(8.dp), fontFamily = FontFamily.Monospace)
         },
         dismissButton = {
             Text(text = "[ CANCEL ]", color = activeColor, modifier = Modifier
-                .clickable { onDismiss() }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }
                 .padding(8.dp), fontFamily = FontFamily.Monospace)
         }
     )
@@ -429,7 +450,7 @@ fun ThemePaletteDialog(
         modifier = Modifier
             .fillMaxWidth(0.95f)
             .border(1.dp, activeColor)
-            .background(Color.Black)
+            .background(TerminalBackground)
             .padding(16.dp)
     ) {
         Column {
@@ -453,7 +474,10 @@ fun ThemePaletteDialog(
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { selectedOn = key }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { selectedOn = key }
                         .padding(vertical = 4.dp)
                 )
             }
@@ -469,7 +493,10 @@ fun ThemePaletteDialog(
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { selectedOff = key }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { selectedOff = key }
                         .padding(vertical = 4.dp)
                 )
             }
@@ -478,7 +505,10 @@ fun ThemePaletteDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSave(selectedOn, selectedOff) }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onSave(selectedOn, selectedOff) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {

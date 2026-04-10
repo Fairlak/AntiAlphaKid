@@ -2,6 +2,7 @@ package ru.fairlak.antialphakid.features.settings.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import ru.fairlak.antialphakid.core.ui.theme.MatrixGreen
 import ru.fairlak.antialphakid.core.ui.theme.ThemeColors
+import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,11 +32,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _offColorKey = MutableStateFlow(prefs.getString("color_off", "RED") ?: "RED")
     val offColorKey: StateFlow<String> = _offColorKey
 
-    val activeColor: StateFlow<Color> = combine(isSystemActive, _onColorKey, _offColorKey) { active, onKey, offKey ->
+    val activeColor: StateFlow<Color> = combine(
+        isSystemActive,
+        _onColorKey,
+        _offColorKey
+    ) { active, onKey, offKey ->
         val key = if (active) onKey else offKey
         ThemeColors[key] ?: MatrixGreen
-    }.stateIn(viewModelScope,
-        SharingStarted.WhileSubscribed(5000), MatrixGreen)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        ThemeColors[if (_isSystemActive.value) _onColorKey.value else _offColorKey.value] ?: MatrixGreen
+    )
 
     fun refreshState() {
         _isSystemActive.value = prefs.getBoolean("system_active", true)
@@ -80,6 +89,23 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         if (newText.isNotBlank()) {
             prefs.edit().putString("blocker_text", newText).apply()
             _blockerText.value = newText
+        }
+    }
+
+    fun toggleSystemState() {
+        val newState = !_isSystemActive.value
+        _isSystemActive.value = newState
+        prefs.edit().putBoolean("system_active", newState).apply()
+
+        val intent = Intent(getApplication(), MonitoringService::class.java)
+        if (newState) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                getApplication<Application>().startForegroundService(intent)
+            } else {
+                getApplication<Application>().startService(intent)
+            }
+        } else {
+            getApplication<Application>().stopService(intent)
         }
     }
 }

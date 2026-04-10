@@ -73,18 +73,20 @@ private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.bac
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel,
     onManagePermissions: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
+    val activeColor by settingsViewModel.activeColor.collectAsState()
     val hasPassword by settingsViewModel.hasPassword.collectAsState()
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
     if (hasPassword && !isAuthenticated) {
         AppLockScreen(
             viewModel = settingsViewModel,
-            onCorrectPassword = { isAuthenticated = true }
+            onCorrectPassword = { isAuthenticated = true },
+            activeColor = activeColor
         )
     } else {
         var isPermissionGranted by remember {
@@ -112,8 +114,7 @@ fun DashboardScreen(
             val filteredApps by viewModel.filteredApps.collectAsState()
             val searchQuery by viewModel.searchQuery.collectAsState()
             val usageStats by viewModel.usageStats.collectAsState()
-            val isSystemActive by viewModel.isSystemActive.collectAsState()
-            val activeColor = if (isSystemActive) TerminalGreen else TerminalRed
+            val isSystemActive by settingsViewModel.isSystemActive.collectAsState()
 
             val showDialog = remember { mutableStateOf(false) }
             var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
@@ -132,7 +133,6 @@ fun DashboardScreen(
             if (showDialog.value) {
                 AppSelectionDialog(
                     installedApps = filteredApps,
-                    searchQuery = searchQuery,
                     onSearchChange = { viewModel.onSearchQueryChange(it) },
                     getAppName = { viewModel.getAppName(it) },
                     getAppIcon = { viewModel.getAppIcon(it) },
@@ -146,7 +146,6 @@ fun DashboardScreen(
                         viewModel.onSearchQueryChange("")
                     },
                     activeColor = activeColor,
-                    isSystemActive = isSystemActive
 
                 )
             }
@@ -174,7 +173,7 @@ fun DashboardScreen(
                 onAddClick = { showDialog.value = true },
                 onItemClick = { editingEntity.value = it },
                 isSystemActive = isSystemActive,
-                onToggleSystem = { viewModel.toggleSystemState() },
+                onToggleSystem = { settingsViewModel.toggleSystemState() },
                 activeColor = activeColor,
                 onOpenSettings = onOpenSettings
             )
@@ -324,14 +323,12 @@ fun DashboardContent(
                         } else {
                             AppLimitItem(
                                 appName = getAppName(item.packageName),
-                                packageName = item.packageName,
                                 minutes = item.limitMinutes,
                                 icon = getAppIcon(item.packageName),
                                 usedMs = usedMs,
                                 onDelete = { onDelete(item.packageName) },
                                 onClick = { onItemClick(item) },
                                 activeColor = activeColor,
-                                isSystemActive = isSystemActive
                             )
                         }
                     }
@@ -350,14 +347,12 @@ fun DashboardContent(
 @Composable
 fun AppLimitItem(
     appName: String,
-    packageName: String,
     icon: Drawable?,
     minutes: Int,
     usedMs: Long,
     onDelete: () -> Unit,
     onClick: () -> Unit,
     activeColor: Color,
-    isSystemActive: Boolean
 ) {
     val usedMin = usedMs / 1000 / 60
     val infiniteTransition = rememberInfiniteTransition(label = "BorderBlink")
@@ -375,7 +370,10 @@ fun AppLimitItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clickable { onClick() },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
         shape = RectangleShape,
         border = BorderStroke(
             width = 1.dp,
@@ -395,7 +393,7 @@ fun AppLimitItem(
                         .size(60.dp)
                         .padding(end = 12.dp),
                     colorFilter = ColorFilter.colorMatrix(
-                        getTerminalColorMatrix(isSystemActive)
+                        getTerminalColorMatrix(activeColor)
                     )
                 )
             }
@@ -431,14 +429,12 @@ fun AppLimitItem(
 @Composable
 fun AppSelectionDialog(
     installedApps: List<ApplicationInfo>,
-    searchQuery: String,
     onSearchChange: (String) -> Unit,
     getAppName: (String) -> String,
     getAppIcon: (String) -> Drawable?,
     onAppSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     activeColor: Color,
-    isSystemActive: Boolean
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -447,18 +443,19 @@ fun AppSelectionDialog(
         modifier = Modifier.border(1.dp, activeColor, RectangleShape),
         shape = RectangleShape,
         dismissButton = {
-            Button(
-                onClick = onDismiss,
-                shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = TerminalBackground,
-                    contentColor = activeColor
-                ),
-                modifier = Modifier.border(1.dp, activeColor, RectangleShape),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            Box(
+                modifier = Modifier
+                    .border(1.dp, activeColor, RectangleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onDismiss() }
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "ОТМЕНА",
+                    color = activeColor,
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -517,7 +514,10 @@ fun AppSelectionDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(1.dp, activeColor, RectangleShape)
-                                .clickable { onAppSelected(app.packageName) },
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onAppSelected(app.packageName) },
                             colors = ListItemDefaults.colors(
                                 containerColor = TerminalBackground,
                                 headlineColor = activeColor,
@@ -530,7 +530,7 @@ fun AppSelectionDialog(
                                         contentDescription = null,
                                         modifier = Modifier.size(40.dp),
                                         colorFilter = ColorFilter.colorMatrix(
-                                            getTerminalColorMatrix(isSystemActive)
+                                            getTerminalColorMatrix(activeColor)
                                         )
                                     )
                                 }
@@ -553,7 +553,10 @@ fun AddNewModuleItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
-            .clickable { onClick() },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
         shape = RectangleShape,
         border = BorderStroke(1.dp, activeColor),
         colors = CardDefaults.cardColors(containerColor = TerminalBackground)
@@ -630,36 +633,41 @@ fun EditLimitDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val newLimit = textValue.toIntOrNull() ?: 30
-                    onConfirm(newLimit)
-                },
-                shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = TerminalBackground,
-                    contentColor = activeColor
-                ),
-                modifier = Modifier.border(1.dp, activeColor, RectangleShape)
-            ) {
-                Text("SAVE", fontFamily = FontFamily.Monospace)
+            CompositionLocalProvider(LocalRippleConfiguration provides null) {
+                Button(
+                    onClick = {
+                        val newLimit = textValue.toIntOrNull() ?: 30
+                        onConfirm(newLimit)
+                    },
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TerminalBackground,
+                        contentColor = activeColor
+                    ),
+                    modifier = Modifier.border(1.dp, activeColor, RectangleShape)
+                ) {
+                    Text("SAVE", fontFamily = FontFamily.Monospace)
+                }
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                shape = RectangleShape
-            ) {
-                Text(
-                    "CANCEL",
-                    color = activeColor.copy(alpha = 0.7f),
-                    fontFamily = FontFamily.Monospace
-                )
+            CompositionLocalProvider(LocalRippleConfiguration provides null) {
+                TextButton(
+                    onClick = onDismiss,
+                    shape = RectangleShape
+                ) {
+                    Text(
+                        "CANCEL",
+                        color = activeColor.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
         }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
     val context = LocalContext.current
@@ -691,7 +699,7 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(TerminalBackground)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -724,31 +732,39 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
 
             if (showButton) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    OutlinedButton(
-                        onClick = onSafeClick,
-                        shape = RectangleShape,
-                        border = BorderStroke(1.dp, TerminalGreen),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TerminalGreen),
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .height(56.dp),
-                        contentPadding = PaddingValues(horizontal = 48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.CenterStart) {
-                            Text(
-                                text = buttonText,
-                                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                                fontFamily = FontFamily.Monospace,
-                                color = Color.Transparent
-                            )
-                            TypingText(
-                                text = buttonText,
-                                key = buttonText,
-                                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                                color = TerminalGreen,
-                                delayMillis = 50,
-                                textAlign = TextAlign.Center
-                            )
+                    CompositionLocalProvider(LocalRippleConfiguration provides null) {
+                        OutlinedButton(
+                            onClick = onSafeClick,
+                            shape = RectangleShape,
+                            border = BorderStroke(1.dp, TerminalGreen),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TerminalGreen),
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .height(56.dp),
+                            contentPadding = PaddingValues(horizontal = 48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                Text(
+                                    text = buttonText,
+                                    style = TextStyle(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    fontFamily = FontFamily.Monospace,
+                                    color = Color.Transparent
+                                )
+                                TypingText(
+                                    text = buttonText,
+                                    key = buttonText,
+                                    style = TextStyle(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = TerminalGreen,
+                                    delayMillis = 50,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
@@ -758,10 +774,12 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppLockScreen(
     onCorrectPassword: () -> Unit,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(),
+    activeColor: Color
 ) {
     var passwordInput by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
@@ -773,7 +791,7 @@ fun AppLockScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(TerminalBackground)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -789,7 +807,7 @@ fun AppLockScreen(
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 ),
-                color = TerminalGreen,
+                color = activeColor,
                 delayMillis = 40,
                 onFinished = { showInput = true }
             )
@@ -801,7 +819,7 @@ fun AppLockScreen(
                     text = subText,
                     key = subText,
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
-                    color = TerminalGreen,
+                    color = activeColor,
                     delayMillis = 20
                 )
 
@@ -815,9 +833,9 @@ fun AppLockScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, if (isError) TerminalRed else TerminalGreen, RectangleShape),
+                        .border(1.dp, if (isError) TerminalRed else activeColor, RectangleShape),
                     textStyle = TextStyle(
-                        color = if (isError) TerminalRed else TerminalGreen,
+                        color = if (isError) TerminalRed else activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 20.sp
                     ),
@@ -827,14 +845,18 @@ fun AppLockScreen(
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        cursorColor = TerminalGreen,
+                        cursorColor = activeColor,
                         focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
+                        unfocusedIndicatorColor = Color.Transparent,
+                        selectionColors = TextSelectionColors(
+                            handleColor = activeColor,
+                            backgroundColor = activeColor.copy(alpha = 0.3f)
+                        )
                     ),
                     placeholder = {
                         Text(
                             "PASSWORD_REQUIRED_",
-                            color = TerminalGreen.copy(alpha = 0.3f),
+                            color = activeColor.copy(alpha = 0.3f),
                             fontFamily = FontFamily.Monospace
                         )
                     }
@@ -851,26 +873,28 @@ fun AppLockScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                OutlinedButton(
-                    onClick = {
-                        if (viewModel.checkPassword(passwordInput)) {
-                            onCorrectPassword()
-                        } else {
-                            isError = true
-                            passwordInput = ""
-                        }
-                    },
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, TerminalGreen),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(
-                        text = "[ INITIALIZE_LOGIN ]",
-                        color = TerminalGreen,
-                        fontFamily = FontFamily.Monospace
-                    )
+                CompositionLocalProvider(LocalRippleConfiguration provides null) {
+                    OutlinedButton(
+                        onClick = {
+                            if (viewModel.checkPassword(passwordInput)) {
+                                onCorrectPassword()
+                            } else {
+                                isError = true
+                                passwordInput = ""
+                            }
+                        },
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, activeColor),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(
+                            text = "[ INITIALIZE_LOGIN ]",
+                            color = activeColor,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
         }
@@ -913,7 +937,7 @@ fun hasUsageStatsPermission(context: Context): Boolean {
     val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         appOps.unsafeCheckOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
+            Process.myUid(),
             context.packageName
         )
     } else {
@@ -949,59 +973,18 @@ fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
     return "[$filled$empty] $currentMinutes/$limitMinutes MIN"
 }
 
-fun getTerminalColorMatrix(isSystemActive: Boolean): ColorMatrix {
-    return if (isSystemActive) {
-        ColorMatrix(floatArrayOf(
-            0f, 0.5f, 0f, 0f, 0f,
-            0f, 1f,   0f, 0f, 0f,
-            0f, 0.5f, 0f, 0f, 0f,
-            0f, 0f,   0f, 1f, 0f
-        ))
-    } else {
-        ColorMatrix(floatArrayOf(
-            0f, 1f,   0f, 0f, 0f,
-            0f, 0f,   0f, 0f, 0f,
-            0f, 0f,   0f, 0f, 0f,
-            0f, 0f,   0f, 1f, 0f
-        ))
-    }
+fun getTerminalColorMatrix(targetColor: Color): ColorMatrix {
+    val r = targetColor.red
+    val g = targetColor.green
+    val b = targetColor.blue
+
+    return ColorMatrix(floatArrayOf(
+        0.33f * r, 0.59f * r, 0.11f * r, 0f, 0f,
+        0.33f * g, 0.59f * g, 0.11f * g, 0f, 0f,
+        0.33f * b, 0.59f * b, 0.11f * b, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    ))
 }
-
-@Composable
-fun TypingText(
-    text: String,
-    key: Any? = null, // Добавляем ключ
-    modifier: Modifier = Modifier,
-    style: TextStyle,
-    color: Color,
-    textAlign: TextAlign = TextAlign.Start,
-    delayMillis: Long = 30,
-    startDelay: Long = 0,
-    onFinished: () -> Unit = {}
-) {
-    // remember(key) очистит переменную, как только ключ изменится
-    var displayedText by remember(key) { mutableStateOf("") }
-
-    LaunchedEffect(key, text) {
-        displayedText = "" // Принудительно очищаем
-        delay(startDelay)
-        text.forEachIndexed { index, _ ->
-            displayedText = text.substring(0, index + 1)
-            delay(delayMillis)
-        }
-        onFinished()
-    }
-
-    Text(
-        text = displayedText,
-        modifier = modifier,
-        style = style,
-        color = color,
-        textAlign = textAlign,
-        fontFamily = FontFamily.Monospace
-    )
-}
-
 
 @Composable
 fun AppLimitItemPlaceholder(appName: String) {
