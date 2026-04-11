@@ -1,5 +1,11 @@
 package ru.fairlak.antialphakid.features.settings.ui
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,19 +21,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
+
 
 private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,7 +78,11 @@ fun SettingsScreen(
                             text = "> SETTINGS",
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(
+                                fontSize = 25.sp,
+                                shadow = Shadow(color = activeColor, blurRadius = 15f)
+                            )
                         )
                     },
                     navigationIcon = {
@@ -72,7 +92,10 @@ fun SettingsScreen(
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
+                            style = TextStyle(
+                                shadow = Shadow(color = activeColor, blurRadius = 15f)
+                            ),
                             modifier = Modifier
                                 .padding(start = 16.dp)
                                 .clickable(
@@ -92,7 +115,14 @@ fun SettingsScreen(
                         titleContentColor = activeColor
                     )
                 )
-                HorizontalDivider(thickness = 1.dp, color = activeColor)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 1.dp)
+                        .terminalGlow(activeColor, blurRadius = 10f)
+                ) {
+                    HorizontalDivider(thickness = 1.dp, color = activeColor)
+                }
             }
         },
         containerColor = TerminalBackground
@@ -149,6 +179,8 @@ fun SettingsScreen(
         if (isVerifyingOldPassword) {
             PasswordInputDialog(
                 title = "ENTER OLD PASSWORD",
+                isValidationEnabled = true,
+                onValidate = { input -> viewModel.checkPassword(input) },
                 onConfirm = { input ->
                     if (viewModel.checkPassword(input)) {
                         isVerifyingOldPassword = false
@@ -162,6 +194,8 @@ fun SettingsScreen(
         if (isVerifyingForDelete) {
             PasswordInputDialog(
                 title = "CONFIRM DELETE PASSWORD",
+                isValidationEnabled = true,
+                onValidate = { input -> viewModel.checkPassword(input) },
                 onConfirm = { input ->
                     if (viewModel.checkPassword(input)) {
                         viewModel.clearPassword()
@@ -180,6 +214,7 @@ fun SettingsScreen(
                     showPassDialog = false
                 },
                 onDismiss = { showPassDialog = false },
+                isValidationEnabled = false,
                 activeColor = activeColor
             )
         }
@@ -225,6 +260,8 @@ fun SettingsModuleItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(4.dp)
+            .terminalGlow(activeColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -246,7 +283,10 @@ fun SettingsModuleItem(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                style = TextStyle(
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
             )
 
             if (showTrailingIcon) {
@@ -273,6 +313,8 @@ fun ThemeEngineModule(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(4.dp)
+            .terminalGlow(activeColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -282,10 +324,36 @@ fun ThemeEngineModule(
         colors = CardDefaults.cardColors(containerColor = TerminalBackground)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("> THEME_ENGINE", color = activeColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("MODE 'ON'  COLOR: [ < $onColorKey > ]", color = activeColor, fontFamily = FontFamily.Monospace)
-            Text("MODE 'OFF' COLOR: [ < $offColorKey > ]", color = activeColor, fontFamily = FontFamily.Monospace)
+            Text(
+                text = "> THEME_ENGINE",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "MODE 'ON'  COLOR: [ < $onColorKey > ]",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                style = TextStyle(
+                    fontSize = 17.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
+            )
+            Spacer(modifier = Modifier.height(15.dp))
+            Text(
+                text = "MODE 'OFF' COLOR: [ < $offColorKey > ]",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                style = TextStyle(
+                    fontSize = 17.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
+            )
         }
     }
 }
@@ -296,44 +364,80 @@ fun PasswordInputDialog(
     title: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
-    activeColor: Color
+    activeColor: Color,
+    isValidationEnabled: Boolean = false,
+    onValidate: (String) -> Boolean = { true }
 ) {
     var text by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
         shape = RectangleShape,
-        modifier = Modifier.border(1.dp, activeColor),
+        modifier = Modifier
+            .border(1.dp, if (isError) Color.Red else activeColor)
+            .terminalGlow(if (isError) Color.Red else activeColor),
         title = {
             Text(
                 text = "> $title",
-                color = activeColor,
+                color = if (isError) Color.Red else activeColor,
                 fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 23.sp,
+                    shadow = Shadow(color = if (isError) Color.Red else activeColor, blurRadius = 15f)
+                )
             )
         },
         text = {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = TerminalBackground,
-                    unfocusedContainerColor = TerminalBackground,
-                    focusedTextColor = activeColor,
-                    unfocusedTextColor = activeColor,
-                    unfocusedIndicatorColor = activeColor,
-                    cursorColor = activeColor,
-                    focusedIndicatorColor = activeColor,
-                    selectionColors = TextSelectionColors(
-                        handleColor = activeColor,
-                        backgroundColor = activeColor.copy(alpha = 0.3f)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                TextField(
+                    value = text,
+                    onValueChange = {
+                        text = it
+                        if (isError) isError = false
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = TerminalBackground,
+                        unfocusedContainerColor = TerminalBackground,
+                        focusedTextColor = if (isError) Color.Red else activeColor,
+                        unfocusedTextColor = if (isError) Color.Red else activeColor,
+                        unfocusedIndicatorColor = if (isError) Color.Red else activeColor,
+                        cursorColor = if (isError) Color.Red else activeColor,
+                        focusedIndicatorColor = if (isError) Color.Red else activeColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = if (isError) Color.Red else activeColor,
+                            backgroundColor = (if (isError) Color.Red else activeColor).copy(alpha = 0.3f)
+                        )
+                    ),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 18.sp,
+                        shadow = Shadow(color = if (isError) Color.Red else activeColor, blurRadius = 15f)
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (isError) {
+                    Text(
+                        text = "!! ACCESS_DENIED: INVALID_KEY !!",
+                        color = Color.Red,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .align(Alignment.CenterHorizontally),
+                        style = TextStyle(
+                            shadow = Shadow(color = Color.Red, blurRadius = 10f)
+                        )
                     )
-                ),
-                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+                }
+            }
         },
         confirmButton = {
             Text(
@@ -343,9 +447,24 @@ fun PasswordInputDialog(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
-                    ) { onConfirm(text) }
+                    ) {
+                        if (isValidationEnabled) {
+                            if (onValidate(text)) {
+                                onConfirm(text)
+                            } else {
+                                isError = true
+                                text = ""
+                            }
+                        } else {
+                            if (text.isNotBlank()) onConfirm(text)
+                        }
+                    }
                     .padding(8.dp),
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = if (isError) Color.Red else activeColor, blurRadius = 15f)
+                )
             )
         },
         dismissButton = {
@@ -358,7 +477,11 @@ fun PasswordInputDialog(
                         indication = null
                     ) { onDismiss() }
                     .padding(8.dp),
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
             )
         }
     )
@@ -378,9 +501,20 @@ fun TextInputDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
         shape = RectangleShape,
-        modifier = Modifier.border(1.dp, activeColor),
+        modifier = Modifier
+            .border(1.dp, activeColor)
+            .terminalGlow(activeColor),
         title = {
-            Text(text = "> $title", color = activeColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Text(
+                text = "> $title",
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 23.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
+            )
         },
         text = {
             Column {
@@ -400,7 +534,11 @@ fun TextInputDialog(
                             backgroundColor = activeColor.copy(alpha = 0.3f)
                         )
                     ),
-                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 18.sp),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 18.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
                     singleLine = false,
                     maxLines = 4,
                     modifier = Modifier.fillMaxWidth()
@@ -410,6 +548,9 @@ fun TextInputDialog(
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
+                    style = TextStyle(
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 4.dp)
@@ -417,20 +558,36 @@ fun TextInputDialog(
             }
         },
         confirmButton = {
-            Text(text = "[ CONFIRM ]", color = activeColor, modifier = Modifier
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onConfirm(text) }
-                .padding(8.dp), fontFamily = FontFamily.Monospace)
+            Text(
+                text = "[ CONFIRM ]",
+                color = activeColor,
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                ),
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onConfirm(text) }
+                    .padding(8.dp),
+                fontFamily = FontFamily.Monospace)
         },
         dismissButton = {
-            Text(text = "[ CANCEL ]", color = activeColor, modifier = Modifier
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() }
-                .padding(8.dp), fontFamily = FontFamily.Monospace)
+            Text(
+                text = "[ CANCEL ]",
+                color = activeColor,
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                ),
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onDismiss() }
+                    .padding(8.dp),
+                fontFamily = FontFamily.Monospace)
         }
     )
 }
@@ -444,12 +601,24 @@ fun ThemePaletteDialog(
 ) {
     var selectedOn by remember { mutableStateOf(currentOnKey) }
     var selectedOff by remember { mutableStateOf(currentOffKey) }
+    var isEditingOn by remember { mutableStateOf(true) }
     val colorOptions = listOf("GREEN", "RED", "BLUE", "AMBER", "WHITE", "VIOLET", "YELLOW")
+    val infiniteTransition = rememberInfiniteTransition(label = "Blink")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Alpha"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth(0.95f)
             .border(1.dp, activeColor)
+            .terminalGlow(activeColor)
             .background(TerminalBackground)
             .padding(16.dp)
     ) {
@@ -459,48 +628,98 @@ fun ThemePaletteDialog(
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 18.sp,
+                style = TextStyle(
+                    shadow = Shadow(activeColor, blurRadius = 10f)
+                )
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = activeColor)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+                    .terminalGlow(activeColor, blurRadius = 13f)
+            ) {
+                HorizontalDivider(thickness = 1.dp, color = activeColor)
+            }
 
-            Text(text = "[ ACTIVE_SHIELD_COLOR ]", color = activeColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
-            Spacer(Modifier.height(8.dp))
-            colorOptions.forEach { key ->
-                val isActive = selectedOn == key
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { isEditingOn = !isEditingOn }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = if (isActive) "> $key (Active)" else "  $key",
-                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.5f),
+                    text = buildAnnotatedString {
+                        append("> SYSTEM_MODE: ")
+                        val stateText = if (isEditingOn) "ON" else "OFF"
+
+                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                            append(">> ")
+                        }
+                        withStyle(style = SpanStyle(color = activeColor)) {
+                            append(stateText)
+                        }
+                        withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
+                            append(" <<")
+                        }
+                    },
+                    color = activeColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 18.sp,
+                    style = TextStyle(shadow = Shadow(activeColor, blurRadius = 15f))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = if (isEditingOn) "[ SELECT_COLOR_FOR_ACTIVE ]" else "[ SELECT_COLOR_FOR_INACTIVE ]",
+                color = activeColor.copy(alpha = 0.7f),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                style = TextStyle(
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            colorOptions.forEach { key ->
+                val isActive = if (isEditingOn) selectedOn == key else selectedOff == key
+                Text(
+                    text = if (isActive) "> $key (Selected)" else "  $key",
+                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.4f),
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { selectedOn = key }
-                        .padding(vertical = 4.dp)
+                        ) {
+                            if (isEditingOn) selectedOn = key else selectedOff = key
+                        }
+                        .padding(vertical = 6.dp),
+                    style = TextStyle(
+                        fontSize = 17.sp,
+                        shadow = if (isActive) Shadow(activeColor, blurRadius = 10f) else null
+                    )
                 )
             }
-            Spacer(Modifier.height(16.dp))
 
-            Text(text = "[ INACTIVE_SYSTEM_COLOR ]", color = activeColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
-            Spacer(Modifier.height(8.dp))
-            colorOptions.forEach { key ->
-                val isActive = selectedOff == key
-                Text(
-                    text = if (isActive) "> $key (Active)" else "  $key",
-                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.5f),
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { selectedOff = key }
-                        .padding(vertical = 4.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+                    .terminalGlow(activeColor, blurRadius = 13f)
+            ) {
+                HorizontalDivider(thickness = 1.dp, color = activeColor)
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = activeColor)
 
             Box(
                 modifier = Modifier
@@ -517,9 +736,21 @@ fun ThemePaletteDialog(
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    style = TextStyle(shadow = Shadow(activeColor, blurRadius = 15f))
                 )
             }
         }
+    }
+}
+
+
+fun Modifier.terminalGlow(color: Color, blurRadius: Float = 15f) = this.drawBehind {
+    val paint = Paint().asFrameworkPaint().apply {
+        this.color = Color.Transparent.toArgb()
+        setShadowLayer(blurRadius, 0f, 0f, color.toArgb())
+    }
+    drawIntoCanvas { canvas ->
+        canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
     }
 }
