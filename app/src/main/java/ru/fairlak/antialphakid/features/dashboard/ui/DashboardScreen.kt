@@ -1,6 +1,5 @@
 package ru.fairlak.antialphakid.features.dashboard.ui
 
-import android.R
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -19,10 +18,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -30,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.fairlak.antialphakid.core.database.AppUsageEntity
@@ -48,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -64,6 +59,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
+import ru.fairlak.antialphakid.features.settings.ui.terminalGlow
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
 
 private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
@@ -216,7 +212,11 @@ fun DashboardContent(
                             text = "> Anti Alpha",
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(
+                                fontSize = 25.sp,
+                                shadow = Shadow(color = activeColor, blurRadius = 15f)
+                            )
                         )
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -238,6 +238,10 @@ fun DashboardContent(
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            shadow = Shadow(color = activeColor, blurRadius = 15f)
+                        ),
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -264,6 +268,10 @@ fun DashboardContent(
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            shadow = Shadow(color = activeColor, blurRadius = 15f)
+                        ),
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -272,10 +280,14 @@ fun DashboardContent(
                         }
                     )
                 }
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = activeColor
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 1.dp)
+                        .terminalGlow(activeColor, blurRadius = 1f)
+                ) {
+                    HorizontalDivider(thickness = 1.dp, color = activeColor)
+                }
             }
         },
     ) { padding ->
@@ -287,7 +299,12 @@ fun DashboardContent(
         ) {
             Text(
                 text = "Application limits",
-                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 25.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                ),
                 modifier = Modifier.padding(vertical = 16.dp),
                 color = activeColor
             )
@@ -303,6 +320,9 @@ fun DashboardContent(
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 18.sp,
+                        style = TextStyle(
+                            shadow = Shadow(color = activeColor, blurRadius = 15f)
+                        ),
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     AddNewModuleItem(
@@ -319,7 +339,7 @@ fun DashboardContent(
                     items(limits, { it.packageName }) { item ->
                         val usedMs = usageStats?.get(item.packageName)
                         if (usedMs == null) {
-                            AppLimitItemPlaceholder(appName = getAppName(item.packageName))
+                            AppLimitItemPlaceholder(appName = getAppName(item.packageName), activeColor)
                         } else {
                             AppLimitItem(
                                 appName = getAppName(item.packageName),
@@ -370,6 +390,7 @@ fun AppLimitItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .terminalGlow(activeColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -399,16 +420,24 @@ fun AppLimitItem(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = appName,
+                Text(
+                    text = appName,
                     fontWeight = FontWeight.Bold,
                     color = activeColor,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontFamily = FontFamily.Monospace)
+                    style = TextStyle(
+                        fontSize = 19.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
+                    fontFamily = FontFamily.Monospace
+                )
 
                 Text(
                     text = getTerminalProgressBar(usedMs, minutes),
                     color = activeColor,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = TextStyle(
+                        fontSize = 15.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 3f)
+                    ),
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(top = 4.dp)
                 )
@@ -440,7 +469,7 @@ fun AppSelectionDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, activeColor, RectangleShape),
+        modifier = Modifier.border(1.dp, activeColor, RectangleShape).terminalGlow(activeColor),
         shape = RectangleShape,
         dismissButton = {
             Box(
@@ -454,9 +483,14 @@ fun AppSelectionDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "ОТМЕНА",
+                    text = "CANCEL",
                     color = activeColor,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
+
                 )
             }
         },
@@ -464,7 +498,11 @@ fun AppSelectionDialog(
             Text(
                 text = "Select an application",
                 color = activeColor,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                style = TextStyle(
+                    fontSize = 29.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
             )
         },
         text = {
@@ -481,9 +519,13 @@ fun AppSelectionDialog(
                         .padding(bottom = 8.dp),
                     placeholder = {
                         Text(
-                            text = "Поиск...",
+                            text = "Search...",
                             color = activeColor.copy(alpha = 0.5f),
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = FontFamily.Monospace,
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                shadow = Shadow(color = activeColor, blurRadius = 10f)
+                            )
                         )
                     },
                     singleLine = true,
@@ -501,7 +543,11 @@ fun AppSelectionDialog(
                         focusedPlaceholderColor = activeColor.copy(alpha = 0.5f),
                         unfocusedPlaceholderColor = activeColor.copy(alpha = 0.5f)
                     ),
-                    textStyle = TextStyle(fontFamily = FontFamily.Monospace)
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 18.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    )
                 )
 
                 LazyColumn(
@@ -514,6 +560,7 @@ fun AppSelectionDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(1.dp, activeColor, RectangleShape)
+                                .terminalGlow(activeColor, blurRadius = 10f)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
@@ -522,7 +569,14 @@ fun AppSelectionDialog(
                                 containerColor = TerminalBackground,
                                 headlineColor = activeColor,
                             ),
-                            headlineContent = { Text(getAppName(app.packageName)) },
+                            headlineContent = { Text(
+                                text = getAppName(app.packageName),
+                                fontFamily = FontFamily.Monospace,
+                                style = TextStyle(
+                                    fontSize = 17.sp,
+                                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                                )
+                            ) },
                             leadingContent = {
                                 icon?.let { drawable ->
                                     Image(
@@ -553,6 +607,7 @@ fun AddNewModuleItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
+            .terminalGlow(activeColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -572,7 +627,10 @@ fun AddNewModuleItem(
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
             )
         }
     }
@@ -593,14 +651,18 @@ fun EditLimitDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, activeColor, RectangleShape),
+        modifier = Modifier.border(1.dp, activeColor, RectangleShape).terminalGlow(activeColor),
         shape = RectangleShape,
         title = {
             Text(
                 text = "> EDIT: $appName",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.titleLarge
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 23.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                )
             )
         },
         text = {
@@ -609,13 +671,22 @@ fun EditLimitDialog(
                     text = "Enter new limit (min):",
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
                     value = textValue,
                     onValueChange = { if (it.all { char -> char.isDigit() }) textValue = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, color = activeColor),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        color = activeColor,
+                        fontSize = 17.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
                     singleLine = true,
                     shape = RectangleShape,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -646,7 +717,14 @@ fun EditLimitDialog(
                     ),
                     modifier = Modifier.border(1.dp, activeColor, RectangleShape)
                 ) {
-                    Text("SAVE", fontFamily = FontFamily.Monospace)
+                    Text(
+                        text = "SAVE",
+                        fontFamily = FontFamily.Monospace,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            shadow = Shadow(color = activeColor, blurRadius = 15f)
+                        )
+                    )
                 }
             }
         },
@@ -659,7 +737,11 @@ fun EditLimitDialog(
                     Text(
                         "CANCEL",
                         color = activeColor.copy(alpha = 0.7f),
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            shadow = Shadow(color = activeColor, blurRadius = 15f)
+                        )
                     )
                 }
             }
@@ -707,7 +789,11 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
             TypingText(
                 text = headerText,
                 key = headerText,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    shadow = Shadow(color = TerminalGreen, blurRadius = 15f)
+                ),
                 color = TerminalGreen,
                 delayMillis = 40,
                 onFinished = { showDescription = true }
@@ -720,7 +806,10 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                     TypingText(
                         text = descriptionText,
                         key = descriptionText,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 18.sp),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 18.sp,
+                            shadow = Shadow(color = TerminalGreen, blurRadius = 15f)
+                        ),
                         color = TerminalGreen,
                         delayMillis = 15,
                         onFinished = { showButton = true }
@@ -748,7 +837,7 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                                     text = buttonText,
                                     style = TextStyle(
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
                                     ),
                                     fontFamily = FontFamily.Monospace,
                                     color = Color.Transparent
@@ -758,7 +847,8 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
                                     key = buttonText,
                                     style = TextStyle(
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        shadow = Shadow(color = TerminalGreen, blurRadius = 15f)
                                     ),
                                     color = TerminalGreen,
                                     delayMillis = 50,
@@ -805,7 +895,8 @@ fun AppLockScreen(
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
                 ),
                 color = activeColor,
                 delayMillis = 40,
@@ -818,7 +909,10 @@ fun AppLockScreen(
                 TypingText(
                     text = subText,
                     key = subText,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 16.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
                     color = activeColor,
                     delayMillis = 20
                 )
@@ -837,7 +931,8 @@ fun AppLockScreen(
                     textStyle = TextStyle(
                         color = if (isError) TerminalRed else activeColor,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
                     ),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -855,7 +950,7 @@ fun AppLockScreen(
                     ),
                     placeholder = {
                         Text(
-                            "PASSWORD_REQUIRED_",
+                            text = "PASSWORD_REQUIRED_",
                             color = activeColor.copy(alpha = 0.3f),
                             fontFamily = FontFamily.Monospace
                         )
@@ -867,7 +962,11 @@ fun AppLockScreen(
                         text = "!! ACCESS_DENIED: INVALID_KEY !!",
                         color = TerminalRed,
                         fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 8.dp),
+                        style = TextStyle(
+                            fontSize = 17.sp,
+                            shadow = Shadow(color = TerminalRed, blurRadius = 15f)
+                        )
                     )
                 }
 
@@ -892,7 +991,11 @@ fun AppLockScreen(
                         Text(
                             text = "[ INITIALIZE_LOGIN ]",
                             color = activeColor,
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = FontFamily.Monospace,
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                shadow = Shadow(color = activeColor, blurRadius = 10f)
+                            )
                         )
                     }
                 }
@@ -987,24 +1090,23 @@ fun getTerminalColorMatrix(targetColor: Color): ColorMatrix {
 }
 
 @Composable
-fun AppLimitItemPlaceholder(appName: String) {
+fun AppLimitItemPlaceholder(appName: String, activeColor: Color) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         shape = RectangleShape,
-        border = BorderStroke(1.dp, TerminalGreen.copy(alpha = 0.3f)),
-        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+        border = BorderStroke(1.dp, activeColor.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = activeColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = appName, fontFamily = FontFamily.Monospace, color = TerminalGreen.copy(alpha = 0.5f))
+            Text(text = appName, fontFamily = FontFamily.Monospace, color = activeColor.copy(alpha = 0.5f))
             Text(
                 text = "[..........] LOADING...",
                 fontFamily = FontFamily.Monospace,
-                color = TerminalGreen.copy(alpha = 0.5f),
+                color = activeColor.copy(alpha = 0.5f),
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
 }
-
