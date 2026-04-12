@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -36,21 +37,26 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
@@ -60,6 +66,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
 import ru.fairlak.antialphakid.features.settings.ui.terminalGlow
+import ru.fairlak.antialphakid.features.settings.ui.terminalOutlineGlow
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
 
 private val TerminalGreen @Composable get() = MaterialTheme.colorScheme.primary
@@ -76,12 +83,12 @@ fun DashboardScreen(
     val context = LocalContext.current
     val activeColor by settingsViewModel.activeColor.collectAsState()
     val hasPassword by settingsViewModel.hasPassword.collectAsState()
-    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+    val isAppUnlocked by settingsViewModel.isAppUnlocked.collectAsState()
 
-    if (hasPassword && !isAuthenticated) {
+    if (hasPassword && !isAppUnlocked) {
         AppLockScreen(
             viewModel = settingsViewModel,
-            onCorrectPassword = { isAuthenticated = true },
+            onCorrectPassword = {  },
             activeColor = activeColor
         )
     } else {
@@ -108,7 +115,6 @@ fun DashboardScreen(
 
             val limits by viewModel.appLimits.collectAsState()
             val filteredApps by viewModel.filteredApps.collectAsState()
-            val searchQuery by viewModel.searchQuery.collectAsState()
             val usageStats by viewModel.usageStats.collectAsState()
             val isSystemActive by settingsViewModel.isSystemActive.collectAsState()
 
@@ -469,31 +475,11 @@ fun AppSelectionDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, activeColor, RectangleShape).terminalGlow(activeColor),
+        modifier = Modifier
+            .fillMaxHeight(0.85f)
+            .border(1.dp, activeColor, RectangleShape)
+            .terminalGlow(activeColor),
         shape = RectangleShape,
-        dismissButton = {
-            Box(
-                modifier = Modifier
-                    .border(1.dp, activeColor, RectangleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { onDismiss() }
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "CANCEL",
-                    color = activeColor,
-                    fontFamily = FontFamily.Monospace,
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        shadow = Shadow(color = activeColor, blurRadius = 15f)
-                    ),
-
-                )
-            }
-        },
         title = {
             Text(
                 text = "Select an application",
@@ -506,52 +492,25 @@ fun AppSelectionDialog(
             )
         },
         text = {
-            Column(modifier = Modifier.fillMaxHeight(0.8f)) {
+            Column(modifier = Modifier.fillMaxHeight()) {
                 var localSearchQuery by remember { mutableStateOf("") }
-                OutlinedTextField(
+                TerminalTextField(
                     value = localSearchQuery,
                     onValueChange = {
                         localSearchQuery = it
                         onSearchChange(it)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    placeholder = {
-                        Text(
-                            text = "Search...",
-                            color = activeColor.copy(alpha = 0.5f),
-                            fontFamily = FontFamily.Monospace,
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                shadow = Shadow(color = activeColor, blurRadius = 10f)
-                            )
-                        )
-                    },
-                    singleLine = true,
-                    shape = RectangleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = activeColor,
-                        unfocusedTextColor = activeColor,
-                        focusedBorderColor = activeColor,
-                        unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
-                        cursorColor = activeColor,
-                        selectionColors = TextSelectionColors(
-                            handleColor = activeColor,
-                            backgroundColor = activeColor.copy(alpha = 0.4f)
-                        ),
-                        focusedPlaceholderColor = activeColor.copy(alpha = 0.5f),
-                        unfocusedPlaceholderColor = activeColor.copy(alpha = 0.5f)
-                    ),
-                    textStyle = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 18.sp,
-                        shadow = Shadow(color = activeColor, blurRadius = 15f)
-                    )
+                    activeColor = activeColor,
+                    placeholder = "Search...",
+                    onlyNumbers = false
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(installedApps) { app ->
@@ -591,6 +550,18 @@ fun AppSelectionDialog(
                             }
                         )
                     }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TerminalButton(
+                        text = "[ CANCEL ]",
+                        activeColor = activeColor,
+                        onClick = onDismiss
+                    )
                 }
             }
         }
@@ -651,7 +622,9 @@ fun EditLimitDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
-        modifier = Modifier.border(1.dp, activeColor, RectangleShape).terminalGlow(activeColor),
+        modifier = Modifier
+            .border(1.dp, activeColor, RectangleShape)
+            .terminalGlow(activeColor),
         shape = RectangleShape,
         title = {
             Text(
@@ -677,56 +650,24 @@ fun EditLimitDialog(
                     ),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                OutlinedTextField(
+                TerminalTextField(
                     value = textValue,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) textValue = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        color = activeColor,
-                        fontSize = 17.sp,
-                        shadow = Shadow(color = activeColor, blurRadius = 15f)
-                    ),
-                    singleLine = true,
-                    shape = RectangleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = activeColor,
-                        unfocusedTextColor = activeColor,
-                        focusedBorderColor = activeColor,
-                        selectionColors = TextSelectionColors(
-                            handleColor = activeColor,
-                            backgroundColor = activeColor.copy(alpha = 0.4f)
-                        ),
-                        unfocusedBorderColor = activeColor.copy(alpha = 0.5f),
-                        cursorColor = activeColor
-                    )
+                    onValueChange = { textValue = it },
+                    activeColor = activeColor,
+                    onlyNumbers = true,
+                    placeholder = ""
                 )
             }
         },
         confirmButton = {
-            CompositionLocalProvider(LocalRippleConfiguration provides null) {
-                Button(
-                    onClick = {
-                        val newLimit = textValue.toIntOrNull() ?: 30
-                        onConfirm(newLimit)
-                    },
-                    shape = RectangleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TerminalBackground,
-                        contentColor = activeColor
-                    ),
-                    modifier = Modifier.border(1.dp, activeColor, RectangleShape)
-                ) {
-                    Text(
-                        text = "SAVE",
-                        fontFamily = FontFamily.Monospace,
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            shadow = Shadow(color = activeColor, blurRadius = 15f)
-                        )
-                    )
+            TerminalButton(
+                text = "[ SAVE ]",
+                activeColor = activeColor,
+                onClick = {
+                    val newLimit = textValue.toIntOrNull() ?: 30
+                    onConfirm(newLimit)
                 }
-            }
+            )
         },
         dismissButton = {
             CompositionLocalProvider(LocalRippleConfiguration provides null) {
@@ -919,42 +860,15 @@ fun AppLockScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                TextField(
+                TerminalTextField(
                     value = passwordInput,
                     onValueChange = {
                         passwordInput = it
                         isError = false
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, if (isError) TerminalRed else activeColor, RectangleShape),
-                    textStyle = TextStyle(
-                        color = if (isError) TerminalRed else activeColor,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 20.sp,
-                        shadow = Shadow(color = activeColor, blurRadius = 15f)
-                    ),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        cursorColor = activeColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        selectionColors = TextSelectionColors(
-                            handleColor = activeColor,
-                            backgroundColor = activeColor.copy(alpha = 0.3f)
-                        )
-                    ),
-                    placeholder = {
-                        Text(
-                            text = "PASSWORD_REQUIRED_",
-                            color = activeColor.copy(alpha = 0.3f),
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
+                    activeColor = if (isError) TerminalRed else activeColor,
+                    isPassword = true,
+                    placeholder = "PASSWORD_REQUIRED_"
                 )
 
                 if (isError) {
@@ -1106,6 +1020,134 @@ fun AppLimitItemPlaceholder(appName: String, activeColor: Color) {
                 fontFamily = FontFamily.Monospace,
                 color = activeColor.copy(alpha = 0.5f),
                 modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun TerminalTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    activeColor: Color,
+    placeholder: String = "",
+    onlyNumbers: Boolean = false,
+    isPassword: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val contentAlpha by animateFloatAsState(
+        targetValue = if (isFocused) 1f else 0.4f,
+        label = "alpha"
+    )
+    val displayColor = activeColor.copy(alpha = contentAlpha)
+
+    val customTextSelectionColors = TextSelectionColors(
+        handleColor = activeColor,
+        backgroundColor = activeColor.copy(alpha = 0.4f)
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .terminalOutlineGlow(activeColor, radius = 15.dp, isFocused = isFocused),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, displayColor),
+        colors = CardDefaults.cardColors(containerColor = Color.Black)
+    ) {
+        CompositionLocalProvider(LocalTextSelectionColors provides customTextSelectionColors) {
+            BasicTextField(
+                value = value,
+                onValueChange = { newValue ->
+                    val filtered = when {
+                        onlyNumbers -> newValue.filter { it.isDigit() }
+                        isPassword -> newValue.filter { !it.isWhitespace() }
+                        else -> newValue
+                    }
+
+                    if (filtered.length <= 25) {
+                        onValueChange(filtered)
+                    }
+                },
+                interactionSource = interactionSource,
+                singleLine = true,
+                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = when {
+                        onlyNumbers -> KeyboardType.Number
+                        isPassword -> KeyboardType.Password
+                        else -> KeyboardType.Text
+                    },
+                    imeAction = ImeAction.Done
+                ),
+                textStyle = TextStyle(
+                    color = displayColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 18.sp,
+                    shadow = Shadow(
+                        color = displayColor,
+                        blurRadius = if (isFocused) 10f else 0f
+                    )
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                cursorBrush = SolidColor(displayColor),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = displayColor.copy(alpha = 0.3f),
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 17.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+        }
+    }
+}
+
+
+@Composable
+fun TerminalButton(
+    text: String,
+    activeColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .padding(vertical = 4.dp)
+            .terminalOutlineGlow(activeColor, radius = 10.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, activeColor),
+        colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                color = activeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    shadow = Shadow(color = activeColor, blurRadius = 10f)
+                )
             )
         }
     }

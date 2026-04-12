@@ -31,6 +31,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val onColorKey: StateFlow<String> = _onColorKey
     private val _offColorKey = MutableStateFlow(prefs.getString("color_off", "RED") ?: "RED")
     val offColorKey: StateFlow<String> = _offColorKey
+    private val _isAppUnlocked = MutableStateFlow(false)
+    val isAppUnlocked: StateFlow<Boolean> = _isAppUnlocked
 
     val activeColor: StateFlow<Color> = combine(
         isSystemActive,
@@ -64,6 +66,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _offColorKey.value = colorKey
     }
 
+//    fun setAppUnlocked(unlocked: Boolean) {
+//        _isAppUnlocked.value = unlocked
+//    }
     fun toggleNotifications() {
         val newState = !_isNotificEnabled.value
         _isNotificEnabled.value = newState
@@ -73,16 +78,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun savePassword(newPassword: String) {
         prefs.edit().putString("app_password", newPassword).apply()
         _hasPassword.value = newPassword.isNotEmpty()
+        _isAppUnlocked.value = true
     }
 
     fun checkPassword(input: String): Boolean {
         val saved = prefs.getString("app_password", "")
-        return saved == input
+        val isValid = saved == input
+        if (isValid) {
+            _isAppUnlocked.value = true
+        }
+        return isValid
     }
 
     fun clearPassword() {
         prefs.edit().remove("app_password").apply()
         _hasPassword.value = false
+        _isAppUnlocked.value = false
     }
 
     fun updateBlockerText(newText: String) {

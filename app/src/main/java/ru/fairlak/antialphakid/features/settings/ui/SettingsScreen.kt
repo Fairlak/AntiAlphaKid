@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -394,9 +395,13 @@ fun PasswordInputDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 TextField(
                     value = text,
-                    onValueChange = {
-                        text = it
-                        if (isError) isError = false
+                    onValueChange = { input ->
+                        val filtered = input.filter { !it.isWhitespace() }
+
+                        if (filtered.length <= 16) {
+                            text = filtered
+                            if (isError) isError = false
+                        }
                     },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -448,15 +453,17 @@ fun PasswordInputDialog(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
-                        if (isValidationEnabled) {
-                            if (onValidate(text)) {
-                                onConfirm(text)
+                        if (text.isNotBlank()) {
+                            if (isValidationEnabled) {
+                                if (onValidate(text)) {
+                                    onConfirm(text)
+                                } else {
+                                    isError = true
+                                    text = ""
+                                }
                             } else {
-                                isError = true
-                                text = ""
+                                onConfirm(text)
                             }
-                        } else {
-                            if (text.isNotBlank()) onConfirm(text)
                         }
                     }
                     .padding(8.dp),
@@ -752,5 +759,39 @@ fun Modifier.terminalGlow(color: Color, blurRadius: Float = 15f) = this.drawBehi
     }
     drawIntoCanvas { canvas ->
         canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+    }
+}
+fun Modifier.terminalOutlineGlow(
+    color: Color,
+    radius: Dp = 10.dp,
+    strokeWidth: Dp = 1.dp,
+    isFocused: Boolean = false
+) = this.drawBehind {
+    val radiusPx = radius.toPx()
+    val strokePx = strokeWidth.toPx()
+
+    val alpha = if (isFocused) 1f else 0.2f
+    val effectiveColor = color.copy(alpha = alpha)
+    val blurRadius = if (isFocused) radiusPx else radiusPx * 0.3f
+
+    drawIntoCanvas { canvas ->
+        val paint = android.graphics.Paint().apply {
+            this.color = effectiveColor.toArgb()
+            this.style = android.graphics.Paint.Style.STROKE
+            this.strokeWidth = strokePx
+            this.isAntiAlias = true
+            this.maskFilter = android.graphics.BlurMaskFilter(
+                blurRadius.coerceAtLeast(1f),
+                android.graphics.BlurMaskFilter.Blur.NORMAL
+            )
+        }
+
+        canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+
+        if (isFocused) {
+            paint.maskFilter = null
+            paint.strokeWidth = strokePx * 1.2f
+            canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+        }
     }
 }
