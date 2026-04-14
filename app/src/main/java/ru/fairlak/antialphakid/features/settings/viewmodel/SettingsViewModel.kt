@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import ru.fairlak.antialphakid.core.ui.theme.MatrixGreen
 import ru.fairlak.antialphakid.core.ui.theme.ThemeColors
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
+import androidx.core.content.edit
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -57,12 +58,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setOnColor(colorKey: String) {
-        prefs.edit().putString("color_on", colorKey).apply()
+        prefs.edit { putString("color_on", colorKey) }
         _onColorKey.value = colorKey
     }
 
     fun setOffColor(colorKey: String) {
-        prefs.edit().putString("color_off", colorKey).apply()
+        prefs.edit { putString("color_off", colorKey) }
         _offColorKey.value = colorKey
     }
 
@@ -72,11 +73,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun toggleNotifications() {
         val newState = !_isNotificEnabled.value
         _isNotificEnabled.value = newState
-        prefs.edit().putBoolean("notifications_enabled", newState).apply()
+        prefs.edit { putBoolean("notifications_enabled", newState) }
     }
 
     fun savePassword(newPassword: String) {
-        prefs.edit().putString("app_password", newPassword).apply()
+        prefs.edit { putString("app_password", newPassword) }
         _hasPassword.value = newPassword.isNotEmpty()
         _isAppUnlocked.value = true
     }
@@ -91,14 +92,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun clearPassword() {
-        prefs.edit().remove("app_password").apply()
+        prefs.edit { remove("app_password") }
         _hasPassword.value = false
         _isAppUnlocked.value = false
     }
 
     fun updateBlockerText(newText: String) {
         if (newText.isNotBlank()) {
-            prefs.edit().putString("blocker_text", newText).apply()
+            prefs.edit { putString("blocker_text", newText) }
             _blockerText.value = newText
         }
     }
@@ -106,7 +107,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun toggleSystemState() {
         val newState = !_isSystemActive.value
         _isSystemActive.value = newState
-        prefs.edit().putBoolean("system_active", newState).apply()
+        prefs.edit { putBoolean("system_active", newState) }
 
         val intent = Intent(getApplication(), MonitoringService::class.java)
         if (newState) {

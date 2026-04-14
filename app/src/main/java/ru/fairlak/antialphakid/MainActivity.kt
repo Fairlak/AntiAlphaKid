@@ -72,18 +72,14 @@ class MainActivity : ComponentActivity() {
                                         val hasUsageStats =
                                             hasUsageStatsPermission(this@MainActivity)
                                         val hasOverlay =
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                                Settings.canDrawOverlays(this@MainActivity)
-                                            } else true
+                                            Settings.canDrawOverlays(this@MainActivity)
 
                                         if (!hasUsageStats) {
                                             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                                         } else if (!hasOverlay) {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                                val intentOverlay =
-                                                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                                startActivity(intentOverlay)
-                                            }
+                                            val intentOverlay =
+                                                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                            startActivity(intentOverlay)
                                         }
                                     },
                                     onOpenSettings = {

@@ -120,7 +120,7 @@ fun DashboardScreen(
             val isSystemActive by settingsViewModel.isSystemActive.collectAsState()
 
             val showDialog = remember { mutableStateOf(false) }
-            var editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
+            val editingEntity = remember { mutableStateOf<AppUsageEntity?>(null) }
 
             LaunchedEffect(Unit) {
                 viewModel.updateUsageStats()
@@ -449,13 +449,20 @@ fun AppLimitItem(
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
-                    contentDescription = "Удалить",
-                    tint = activeColor,
-                    modifier = Modifier.size(40.dp))
-            }
+            Icon(
+                painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
+                contentDescription = "Удалить",
+                tint = activeColor,
+                modifier = Modifier
+                    .size(60.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onDelete()
+                    }
+                    .padding(7.dp)
+            )
         }
     }
 }

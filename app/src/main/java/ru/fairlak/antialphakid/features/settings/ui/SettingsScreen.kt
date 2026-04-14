@@ -298,7 +298,13 @@ fun SettingsModuleItem(
                     tint = activeColor,
                     modifier = Modifier
                         .size(28.dp)
-                        .clickable { onTrailingIconClick?.invoke() }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onTrailingIconClick?.invoke()
+                        }
+
                 )
             }
         }
