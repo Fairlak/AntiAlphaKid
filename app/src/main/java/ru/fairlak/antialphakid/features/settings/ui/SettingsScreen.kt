@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import ru.fairlak.antialphakid.features.effects.crtEffect
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
 
 
@@ -377,6 +378,7 @@ fun PasswordInputDialog(
         containerColor = TerminalBackground,
         shape = RectangleShape,
         modifier = Modifier
+            .crtEffect(activeColor)
             .border(1.dp, if (isError) Color.Red else activeColor)
             .terminalGlow(if (isError) Color.Red else activeColor),
         title = {
@@ -509,6 +511,7 @@ fun TextInputDialog(
         containerColor = TerminalBackground,
         shape = RectangleShape,
         modifier = Modifier
+            .crtEffect(activeColor)
             .border(1.dp, activeColor)
             .terminalGlow(activeColor),
         title = {
@@ -623,6 +626,7 @@ fun ThemePaletteDialog(
 
     Box(
         modifier = Modifier
+            .crtEffect(activeColor)
             .fillMaxWidth(0.95f)
             .border(1.dp, activeColor)
             .terminalGlow(activeColor)

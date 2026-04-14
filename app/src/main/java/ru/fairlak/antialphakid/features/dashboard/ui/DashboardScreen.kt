@@ -65,6 +65,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
+import ru.fairlak.antialphakid.features.effects.crtEffect
 import ru.fairlak.antialphakid.features.settings.ui.terminalGlow
 import ru.fairlak.antialphakid.features.settings.ui.terminalOutlineGlow
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
@@ -477,22 +478,28 @@ fun AppSelectionDialog(
         containerColor = TerminalBackground,
         modifier = Modifier
             .fillMaxHeight(0.85f)
+            .fillMaxWidth()
+            .crtEffect(activeColor)
             .border(1.dp, activeColor, RectangleShape)
             .terminalGlow(activeColor),
         shape = RectangleShape,
-        title = {
-            Text(
-                text = "Select an application",
-                color = activeColor,
-                fontFamily = FontFamily.Monospace,
-                style = TextStyle(
-                    fontSize = 29.sp,
-                    shadow = Shadow(color = activeColor, blurRadius = 15f)
-                )
-            )
-        },
         text = {
-            Column(modifier = Modifier.fillMaxHeight()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 0.dp, start = 0.dp, end = 0.dp, bottom = 0.dp)
+            ) {
+                Text(
+                    text = "Select an application",
+                    color = activeColor,
+                    fontFamily = FontFamily.Monospace,
+                    style = TextStyle(
+                        fontSize = 29.sp,
+                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                    ),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
                 var localSearchQuery by remember { mutableStateOf("") }
                 TerminalTextField(
                     value = localSearchQuery,
@@ -505,7 +512,7 @@ fun AppSelectionDialog(
                     onlyNumbers = false
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 LazyColumn(
                     modifier = Modifier
@@ -528,14 +535,16 @@ fun AppSelectionDialog(
                                 containerColor = TerminalBackground,
                                 headlineColor = activeColor,
                             ),
-                            headlineContent = { Text(
-                                text = getAppName(app.packageName),
-                                fontFamily = FontFamily.Monospace,
-                                style = TextStyle(
-                                    fontSize = 17.sp,
-                                    shadow = Shadow(color = activeColor, blurRadius = 15f)
+                            headlineContent = {
+                                Text(
+                                    text = getAppName(app.packageName),
+                                    fontFamily = FontFamily.Monospace,
+                                    style = TextStyle(
+                                        fontSize = 17.sp,
+                                        shadow = Shadow(color = activeColor, blurRadius = 15f)
+                                    )
                                 )
-                            ) },
+                            },
                             leadingContent = {
                                 icon?.let { drawable ->
                                     Image(
@@ -551,10 +560,11 @@ fun AppSelectionDialog(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = 16.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TerminalButton(
@@ -623,6 +633,7 @@ fun EditLimitDialog(
         onDismissRequest = onDismiss,
         containerColor = TerminalBackground,
         modifier = Modifier
+            .crtEffect(activeColor)
             .border(1.dp, activeColor, RectangleShape)
             .terminalGlow(activeColor),
         shape = RectangleShape,

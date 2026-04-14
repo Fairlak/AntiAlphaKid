@@ -9,9 +9,11 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
@@ -23,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import ru.fairlak.antialphakid.core.ui.theme.AntiAlphaKidTheme
 import ru.fairlak.antialphakid.features.dashboard.ui.DashboardScreen
 import ru.fairlak.antialphakid.features.dashboard.ui.hasUsageStatsPermission
+import ru.fairlak.antialphakid.features.effects.crtEffect
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 import ru.fairlak.antialphakid.features.settings.ui.SettingsScreen
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
@@ -48,47 +51,55 @@ class MainActivity : ComponentActivity() {
             AntiAlphaKidTheme {
                 val navController = rememberNavController()
                 val globalSettingsViewModel: SettingsViewModel = viewModel()
+                val activeColor by globalSettingsViewModel.activeColor.collectAsState()
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .crtEffect(activeColor),
                     color = Color.Black
                 ) {
-                    NavHost(
-                        navController = navController,
-                        startDestination = "dashboard",
-                        enterTransition = { androidx.compose.animation.EnterTransition.None },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None }
-                    ) {
-                        composable("dashboard") {
-                            DashboardScreen(
-                                settingsViewModel = globalSettingsViewModel,
-                                onManagePermissions = {
-                                    val hasUsageStats = hasUsageStatsPermission(this@MainActivity)
-                                    val hasOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                        Settings.canDrawOverlays(this@MainActivity)
-                                    } else true
+                    Box {
+                        NavHost(
+                            navController = navController,
+                            startDestination = "dashboard",
+                            enterTransition = { androidx.compose.animation.EnterTransition.None },
+                            exitTransition = { androidx.compose.animation.ExitTransition.None }
+                        ) {
+                            composable("dashboard") {
+                                DashboardScreen(
+                                    settingsViewModel = globalSettingsViewModel,
+                                    onManagePermissions = {
+                                        val hasUsageStats =
+                                            hasUsageStatsPermission(this@MainActivity)
+                                        val hasOverlay =
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                                Settings.canDrawOverlays(this@MainActivity)
+                                            } else true
 
-                                    if (!hasUsageStats) {
-                                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                                    } else if (!hasOverlay) {
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                            val intentOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                            startActivity(intentOverlay)
+                                        if (!hasUsageStats) {
+                                            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                                        } else if (!hasOverlay) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                                val intentOverlay =
+                                                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                                startActivity(intentOverlay)
+                                            }
+                                        }
+                                    },
+                                    onOpenSettings = {
+                                        navController.navigate("settings") {
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
                                     }
-                                },
-                                onOpenSettings = {
-                                    navController.navigate("settings") {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            )
-                        }
-                        composable("settings") {
-                            SettingsScreen(
-                                viewModel = globalSettingsViewModel,
-                                onBack = { navController.popBackStack() }
-                            )
+                                )
+                            }
+                            composable("settings") {
+                                SettingsScreen(
+                                    viewModel = globalSettingsViewModel,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
                         }
                     }
                 }
