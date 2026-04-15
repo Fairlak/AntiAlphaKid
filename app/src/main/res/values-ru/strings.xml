@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Anti Alpha</string>
+
+    <string name="settings_button">[ НАСТРОЙКИ ]</string>
+    <string name="system_mode">> РЕЖИМ_СИСТ: </string>
+    <string name="on">ВКЛ</string>
+    <string name="off">ВЫКЛ</string>
+
+    <string name="settings_title">> НАСТРОЙКИ</string>
+    <string name="back_button">[ НАЗАД ]</string>
+    <string name="add_password">[ + ДОБАВИТЬ_ПАРОЛЬ ]</string>
+    <string name="change_password">[ * ИЗМЕНИТЬ_ПАРОЛЬ ]</string>
+    <string name="confirm_delete_password">ПОДТВЕРДИТЕ УДАЛЕНИЕ ПАРОЛЯ</string>
+    <string name="enter_old_password">ВВЕДИТЕ СТАРЫЙ ПАРОЛЬ</string>
+    <string name="enter_new_password">ВВЕДИТЕ НОВЫЙ ПАРОЛЬ</string>
+    <string name="set_password">УСТАНОВИТЬ ПАРОЛЬ</string>
+
+    <string name="blocker_text_label">> ТЕКСТ_БЛОКИРОВКИ:</string>
+    <string name="blocker_text">ТЕКСТ БЛОКИРОВКИ:</string>
+    <string name="notifications_label">> УВЕДОМЛЕНИЯ: </string>
+
+    <string name="theme_engine_label">> РЕДАКТОР_ТЕМЫ</string>
+    <string name="access_denied">!! ДОСТУП ЗАПРЕЩЕН: НЕВЕРНЫЙ КЛЮЧ !!</string>
+    <string name="confirm_button">[ ПРИНЯТЬ ]</string>
+    <string name="cancel_button">[ ОТМЕНА ]</string>
+    <string name="theme_setup">> ВЫБОР_ЦВЕТОВОЙ_ТЕМЫ</string>
+    <string name="select_active_color">[ ВЫБЕРИТЕ_ЦВЕТ_АКТИВ_РЕЖИМА ]</string>
+    <string name="select_inactive_color">[ ВЫБЕРИТЕ_ЦВЕТ_НЕАКТИВ_РЕЖИМА ]</string>
+    <string name="selected">(Выбрано)</string>
+    <string name="save_an_exit">[ СОХРАНИТЬ И ВЫЙТИ ]</string>
+
+    <string name="language_setting">> ВЫБРАННЫЙ_ЯЗЫК: </string>
+    <string name="select_language_title">> ВЫБОР ЯЗЫКА</string>
+    <string name="lang_ru">РУССКИЙ</string>
+    <string name="lang_en">АНГЛИЙСКИЙ</string>
+    <string name="save_button">[ СОХРАНИТЬ ]</string>
+
+    <string name="default_blocker_text"> ЛИМИТ ИСЧЕРПАН </string>
+</resources>

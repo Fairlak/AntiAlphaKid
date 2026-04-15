@@ -1,3 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AntiAlphaKid</string>
+    <string name="app_name">Anti Alpha</string>
+
+    <string name="settings_button">[ SETTINGS ]</string>
+    <string name="system_mode">> SYSTEM_MODE: </string>
+    <string name="on">ON</string>
+    <string name="off">OFF</string>
+
+    <string name="settings_title">> SETTINGS</string>
+    <string name="back_button">[ BACK ]</string>
+    <string name="add_password">[ + ADD_PASSWORD ]</string>
+    <string name="change_password">[ * CHANGE_PASSWORD ]</string>
+    <string name="confirm_delete_password">CONFIRM DELETE PASSWORD</string>
+    <string name="enter_old_password">ENTER OLD PASSWORD</string>
+    <string name="enter_new_password">ENTER NEW PASSWORD</string>
+    <string name="set_password">SET PASSWORD</string>
+
+    <string name="blocker_text_label">> BLOCKER_TEXT:</string>
+    <string name="blocker_text">BLOCKER TEXT:</string>
+    <string name="notifications_label">> NOTIFICATIONS: </string>
+
+    <string name="theme_engine_label">> THEME_EDITOR</string>
+    <string name="access_denied">!! ACCESS_DENIED: INVALID_KEY !!</string>
+    <string name="confirm_button">[ CONFIRM ]</string>
+    <string name="cancel_button">[ CANCEL ]</string>
+    <string name="theme_setup">> THEME_PALETTE_SETUP</string>
+    <string name="select_active_color">[ SELECT_COLOR_FOR_ACTIVE ]</string>
+    <string name="select_inactive_color">[ SELECT_COLOR_FOR_INACTIVE ]</string>
+    <string name="selected">(Selected)</string>
+    <string name="save_an_exit">[ SAVE_AND_EXIT ]</string>
+
+
+
+    <string name="language_setting">> SELECTED_LANGUAGE: </string>
+    <string name="select_language_title">> SELECT LANGUAGE</string>
+    <string name="lang_ru">RUSSIAN</string>
+    <string name="lang_en">ENGLISH</string>
+    <string name="save_button">[ SAVE ]</string>
+
+    <string name="default_blocker_text"> LIMIT EXCEEDED </string>
+
 </resources>

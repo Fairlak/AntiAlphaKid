@@ -64,8 +64,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import ru.fairlak.antialphakid.R
+import ru.fairlak.antialphakid.core.common.txt
 import ru.fairlak.antialphakid.core.ui.theme.TerminalRed
-import ru.fairlak.antialphakid.features.effects.crtEffect
+import ru.fairlak.antialphakid.core.ui.crtEffect
 import ru.fairlak.antialphakid.features.settings.ui.terminalGlow
 import ru.fairlak.antialphakid.features.settings.ui.terminalOutlineGlow
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
@@ -200,6 +202,7 @@ fun DashboardContent(
     onOpenSettings: () -> Unit
 ) {
 
+    val context = LocalContext.current
     val infiniteTransition = rememberInfiniteTransition(label = "Blink")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -241,7 +244,7 @@ fun DashboardContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "[ SETTINGS ]",
+                        text = context.txt(R.string.settings_button),
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,

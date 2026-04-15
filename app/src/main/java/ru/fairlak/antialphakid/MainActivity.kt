@@ -1,6 +1,7 @@
 package ru.fairlak.antialphakid
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -12,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -25,7 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import ru.fairlak.antialphakid.core.ui.theme.AntiAlphaKidTheme
 import ru.fairlak.antialphakid.features.dashboard.ui.DashboardScreen
 import ru.fairlak.antialphakid.features.dashboard.ui.hasUsageStatsPermission
-import ru.fairlak.antialphakid.features.effects.crtEffect
+import ru.fairlak.antialphakid.core.ui.crtEffect
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 import ru.fairlak.antialphakid.features.settings.ui.SettingsScreen
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
@@ -101,5 +103,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    override fun attachBaseContext(newBase: Context) {
+        val context = ru.fairlak.antialphakid.core.common.LocaleHelper.wrapContext(newBase)
+        super.attachBaseContext(context)
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -42,8 +43,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import ru.fairlak.antialphakid.features.effects.crtEffect
+import ru.fairlak.antialphakid.core.common.txt
+import ru.fairlak.antialphakid.core.ui.crtEffect
 import ru.fairlak.antialphakid.features.settings.viewmodel.SettingsViewModel
+import ru.fairlak.antialphakid.R
 
 
 private val TerminalBackground @Composable get() = MaterialTheme.colorScheme.background
@@ -53,6 +56,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.refreshState()
     }
@@ -71,13 +75,15 @@ fun SettingsScreen(
     val onColorKey by viewModel.onColorKey.collectAsState()
     val offColorKey by viewModel.offColorKey.collectAsState()
 
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             Column(modifier = Modifier.background(TerminalBackground)) {
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            text = "> SETTINGS",
+                            text = context.txt(R.string.settings_title),
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -90,7 +96,7 @@ fun SettingsScreen(
                     navigationIcon = {
                         var lastClickTime by remember { mutableLongStateOf(0L) }
                         Text(
-                            text = "[ BACK ]",
+                            text = context.txt(R.string.back_button),
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -140,7 +146,7 @@ fun SettingsScreen(
 
             item {
                 SettingsModuleItem(
-                    label = if (hasPassword) "[ * CHANGE_PASSWORD ]" else "[ + ADD_PASSWORD ]",
+                    label = if (hasPassword) context.txt(R.string.change_password) else context.txt(R.string.add_password),
                     activeColor = activeColor,
                     showTrailingIcon = hasPassword,
                     onTrailingIconClick = {
@@ -155,7 +161,7 @@ fun SettingsScreen(
 
             item {
                 SettingsModuleItem(
-                    label = "> BLOCKER_TEXT: $blockerText",
+                    label = "${context.txt(R.string.blocker_text_label)} $blockerText",
                     activeColor = activeColor,
                     onClick = { showBlockerTextDialog = true }
                 )
@@ -163,7 +169,11 @@ fun SettingsScreen(
 
             item {
                 SettingsModuleItem(
-                    label = "> NOTIFICATIONS: ${if (isNotificationsEnabled) "ON" else "OFF"}",
+                    label = "${context.txt(R.string.notifications_label)} ${if (isNotificationsEnabled)
+                        context.txt(R.string.on)
+                    else
+                        context.txt(R.string.off)
+                    }",
                     activeColor = activeColor,
                     onClick = { viewModel.toggleNotifications() }
                 )
@@ -177,10 +187,20 @@ fun SettingsScreen(
                     onClick = { showThemeDialog = true }
                 )
             }
+            item {
+                val currentLang by viewModel.currentLanguage.collectAsState()
+                val context = LocalContext.current
+
+                SettingsModuleItem(
+                    label = context.txt(R.string.language_setting) + (if (currentLang == "ru") " RU" else " EN"),
+                    activeColor = activeColor,
+                    onClick = { showLanguageDialog = true }
+                )
+            }
         }
         if (isVerifyingOldPassword) {
             PasswordInputDialog(
-                title = "ENTER OLD PASSWORD",
+                title = context.txt(R.string.enter_old_password),
                 isValidationEnabled = true,
                 onValidate = { input -> viewModel.checkPassword(input) },
                 onConfirm = { input ->
@@ -195,7 +215,7 @@ fun SettingsScreen(
         }
         if (isVerifyingForDelete) {
             PasswordInputDialog(
-                title = "CONFIRM DELETE PASSWORD",
+                title = context.txt(R.string.confirm_delete_password),
                 isValidationEnabled = true,
                 onValidate = { input -> viewModel.checkPassword(input) },
                 onConfirm = { input ->
@@ -210,7 +230,10 @@ fun SettingsScreen(
         }
         if (showPassDialog) {
             PasswordInputDialog(
-                title = if (hasPassword) "ENTER NEW PASSWORD" else "SET PASSWORD",
+                title = if (hasPassword)
+                    context.txt(R.string.enter_new_password)
+                else
+                    context.txt(R.string.set_password),
                 onConfirm = {
                     viewModel.savePassword(it)
                     showPassDialog = false
@@ -223,7 +246,7 @@ fun SettingsScreen(
 
         if (showBlockerTextDialog) {
             TextInputDialog(
-                title = "BLOCKER_TEXT",
+                title = context.txt(R.string.blocker_text),
                 initialText = blockerText,
                 onConfirm = { newText ->
                     viewModel.updateBlockerText(newText)
@@ -247,6 +270,22 @@ fun SettingsScreen(
                     }
                 )
             }
+        }
+
+        if (showLanguageDialog) {
+            val currentLang by viewModel.currentLanguage.collectAsState()
+            LanguageSelectionDialog(
+                currentLang = currentLang,
+                activeColor = activeColor,
+                onDismiss = { showLanguageDialog = false },
+                onSave = { newLang ->
+                    viewModel.setLanguage(newLang)
+                    showLanguageDialog = false
+                    val activity = context as? android.app.Activity
+                    activity?.window?.setWindowAnimations(0)
+                    activity?.recreate()
+                }
+            )
         }
     }
 }
@@ -293,7 +332,7 @@ fun SettingsModuleItem(
 
             if (showTrailingIcon) {
                 Icon(
-                    painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
+                    painter = painterResource(id = R.drawable.ic_trash),
                     contentDescription = "Delete",
                     tint = activeColor,
                     modifier = Modifier
@@ -318,6 +357,7 @@ fun ThemeEngineModule(
     offColorKey: String,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -333,7 +373,7 @@ fun ThemeEngineModule(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "> THEME_ENGINE",
+                text = context.txt(R.string.theme_engine_label),
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -378,6 +418,7 @@ fun PasswordInputDialog(
 ) {
     var text by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -385,17 +426,17 @@ fun PasswordInputDialog(
         shape = RectangleShape,
         modifier = Modifier
             .crtEffect(activeColor)
-            .border(1.dp, if (isError) Color.Red else activeColor)
-            .terminalGlow(if (isError) Color.Red else activeColor),
+            .border(1.dp, activeColor)
+            .terminalGlow(activeColor),
         title = {
             Text(
                 text = "> $title",
-                color = if (isError) Color.Red else activeColor,
+                color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 style = TextStyle(
                     fontSize = 23.sp,
-                    shadow = Shadow(color = if (isError) Color.Red else activeColor, blurRadius = 15f)
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
                 )
             )
         },
@@ -437,7 +478,7 @@ fun PasswordInputDialog(
 
                 if (isError) {
                     Text(
-                        text = "!! ACCESS_DENIED: INVALID_KEY !!",
+                        text = context.txt(R.string.access_denied),
                         color = Color.Red,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 14.sp,
@@ -454,7 +495,7 @@ fun PasswordInputDialog(
         },
         confirmButton = {
             Text(
-                text = "[ CONFIRM ]",
+                text = context.txt(R.string.confirm_button),
                 color = activeColor,
                 modifier = Modifier
                     .clickable(
@@ -478,13 +519,13 @@ fun PasswordInputDialog(
                 fontFamily = FontFamily.Monospace,
                 style = TextStyle(
                     fontSize = 18.sp,
-                    shadow = Shadow(color = if (isError) Color.Red else activeColor, blurRadius = 15f)
+                    shadow = Shadow(color = activeColor, blurRadius = 15f)
                 )
             )
         },
         dismissButton = {
             Text(
-                text = "[ CANCEL ]",
+                text = context.txt(R.string.cancel_button),
                 color = activeColor,
                 modifier = Modifier
                     .clickable(
@@ -511,6 +552,7 @@ fun TextInputDialog(
     activeColor: Color
 ) {
     var text by remember { mutableStateOf(initialText) }
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -575,7 +617,7 @@ fun TextInputDialog(
         },
         confirmButton = {
             Text(
-                text = "[ CONFIRM ]",
+                text = context.txt(R.string.confirm_button),
                 color = activeColor,
                 style = TextStyle(
                     fontSize = 18.sp,
@@ -591,7 +633,7 @@ fun TextInputDialog(
         },
         dismissButton = {
             Text(
-                text = "[ CANCEL ]",
+                text = context.txt(R.string.cancel_button),
                 color = activeColor,
                 style = TextStyle(
                     fontSize = 18.sp,
@@ -618,6 +660,7 @@ fun ThemePaletteDialog(
     var selectedOn by remember { mutableStateOf(currentOnKey) }
     var selectedOff by remember { mutableStateOf(currentOffKey) }
     var isEditingOn by remember { mutableStateOf(true) }
+    val context = LocalContext.current
     val colorOptions = listOf("GREEN", "RED", "BLUE", "AMBER", "WHITE", "VIOLET", "YELLOW")
     val infiniteTransition = rememberInfiniteTransition(label = "Blink")
     val alpha by infiniteTransition.animateFloat(
@@ -641,7 +684,7 @@ fun ThemePaletteDialog(
     ) {
         Column {
             Text(
-                text = "> THEME_PALETTE_SETUP",
+                text = context.txt(R.string.theme_setup),
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -672,11 +715,14 @@ fun ThemePaletteDialog(
             ) {
                 Text(
                     text = buildAnnotatedString {
-                        append("> SYSTEM_MODE: ")
-                        val stateText = if (isEditingOn) "ON" else "OFF"
+                        append(context.txt(R.string.system_mode))
+                        val stateText = if (isEditingOn)
+                            context.txt(R.string.on)
+                        else
+                            context.txt(R.string.off)
 
                         withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
-                            append(">> ")
+                            append(" >> ")
                         }
                         withStyle(style = SpanStyle(color = activeColor)) {
                             append(stateText)
@@ -695,7 +741,10 @@ fun ThemePaletteDialog(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = if (isEditingOn) "[ SELECT_COLOR_FOR_ACTIVE ]" else "[ SELECT_COLOR_FOR_INACTIVE ]",
+                text = if (isEditingOn)
+                    context.txt(R.string.select_active_color)
+                else
+                    context.txt(R.string.select_inactive_color),
                 color = activeColor.copy(alpha = 0.7f),
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
@@ -710,7 +759,10 @@ fun ThemePaletteDialog(
             colorOptions.forEach { key ->
                 val isActive = if (isEditingOn) selectedOn == key else selectedOff == key
                 Text(
-                    text = if (isActive) "> $key (Selected)" else "  $key",
+                    text = if (isActive)
+                        "> $key ${context.txt(R.string.selected)}"
+                    else
+                        "  $key",
                     color = if (isActive) activeColor else activeColor.copy(alpha = 0.4f),
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
@@ -749,7 +801,7 @@ fun ThemePaletteDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "[ SAVE_AND_EXIT ]",
+                    text = context.txt(R.string.save_an_exit),
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
@@ -760,6 +812,102 @@ fun ThemePaletteDialog(
         }
     }
 }
+
+
+@Composable
+fun LanguageSelectionDialog(
+    currentLang: String,
+    activeColor: Color,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedLang by remember { mutableStateOf(currentLang) }
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .crtEffect(activeColor)
+                .fillMaxWidth()
+                .border(1.dp, activeColor, RectangleShape)
+                .terminalGlow(activeColor),
+            shape = RectangleShape,
+            colors = CardDefaults.cardColors(containerColor = TerminalBackground)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = context.txt(R.string.select_language_title),
+                    color = activeColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    style = TextStyle(shadow = Shadow(activeColor, blurRadius = 15f))
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .terminalGlow(activeColor, blurRadius = 10f),
+                    thickness = 1.dp,
+                    color = activeColor
+                )
+                listOf("en" to R.string.lang_en, "ru" to R.string.lang_ru).forEach { (code, nameRes) ->
+                    val isSelected = selectedLang == code
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { selectedLang = code }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isSelected) ">> " else "   ",
+                            color = if (isSelected) activeColor else activeColor.copy(alpha = 0.4f),
+                            fontFamily = FontFamily.Monospace,
+                            style = TextStyle(
+                                shadow = if (isSelected) Shadow(activeColor, blurRadius = 15f) else null
+                            )
+                        )
+                        Text(
+                            text = context.txt(nameRes),
+                            color = if (isSelected) activeColor else activeColor.copy(alpha = 0.4f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 18.sp,
+                            style = TextStyle(
+                                shadow = if (isSelected) Shadow(activeColor, blurRadius = 15f) else null
+                            )
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 1.dp, color = activeColor.copy(alpha = 0.4f))
+
+                Text(
+                    text = context.txt(R.string.save_button),
+                    color = activeColor,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .clickable (
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onSave(selectedLang) }
+                        .padding(8.dp),
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    style = TextStyle(
+                        fontSize = 20.sp,
+                        shadow = Shadow(activeColor, blurRadius = 15f)
+                    )
+                )
+            }
+        }
+    }
+}
+
+
 
 
 fun Modifier.terminalGlow(color: Color, blurRadius: Float = 15f) = this.drawBehind {

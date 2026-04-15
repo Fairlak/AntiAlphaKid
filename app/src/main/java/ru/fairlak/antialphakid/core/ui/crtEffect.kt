@@ -1,4 +1,4 @@
-package ru.fairlak.antialphakid.features.effects
+package ru.fairlak.antialphakid.core.ui
 
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.*

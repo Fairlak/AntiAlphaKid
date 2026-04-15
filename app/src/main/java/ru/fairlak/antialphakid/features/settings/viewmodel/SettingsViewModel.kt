@@ -15,18 +15,19 @@ import ru.fairlak.antialphakid.core.ui.theme.MatrixGreen
 import ru.fairlak.antialphakid.core.ui.theme.ThemeColors
 import ru.fairlak.antialphakid.features.monitor.service.MonitoringService
 import androidx.core.content.edit
-
+import ru.fairlak.antialphakid.R
+import ru.fairlak.antialphakid.core.common.txt
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
-
+    private val defText get() = getApplication<Application>().txt(R.string.default_blocker_text)
     private val _isSystemActive = MutableStateFlow(prefs.getBoolean("system_active", true))
     val isSystemActive: StateFlow<Boolean> = _isSystemActive
     private val _isNotificEnabled = MutableStateFlow(prefs.getBoolean("notifications_enabled", true))
     val isNotificEnabled: StateFlow<Boolean> = _isNotificEnabled
     private val _hasPassword = MutableStateFlow(!prefs.getString("app_password", null).isNullOrEmpty())
     val hasPassword: StateFlow<Boolean> = _hasPassword
-    private val _blockerText = MutableStateFlow(prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН")
+    private val _blockerText = MutableStateFlow(prefs.getString("blocker_text", defText) ?: defText)
     val blockerText: StateFlow<String> = _blockerText
     private val _onColorKey = MutableStateFlow(prefs.getString("color_on", "GREEN") ?: "GREEN")
     val onColorKey: StateFlow<String> = _onColorKey
@@ -34,6 +35,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val offColorKey: StateFlow<String> = _offColorKey
     private val _isAppUnlocked = MutableStateFlow(false)
     val isAppUnlocked: StateFlow<Boolean> = _isAppUnlocked
+    private val _currentLanguage = MutableStateFlow(prefs.getString("app_lang", "system") ?: "system")
+    val currentLanguage: StateFlow<String> = _currentLanguage
 
     val activeColor: StateFlow<Color> = combine(
         isSystemActive,
@@ -52,7 +55,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _isSystemActive.value = prefs.getBoolean("system_active", true)
         _isNotificEnabled.value = prefs.getBoolean("notifications_enabled", true)
         _hasPassword.value = !prefs.getString("app_password", null).isNullOrEmpty()
-        _blockerText.value = prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН"
+        _currentLanguage.value = prefs.getString("app_lang", "system") ?: "system"
+        _blockerText.value = prefs.getString("blocker_text", defText) ?: defText
         _onColorKey.value = prefs.getString("color_on", "GREEN") ?: "GREEN"
         _offColorKey.value = prefs.getString("color_off", "RED") ?: "RED"
     }
@@ -102,6 +106,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             prefs.edit { putString("blocker_text", newText) }
             _blockerText.value = newText
         }
+    }
+
+    fun setLanguage(langCode: String) {
+        prefs.edit { putString("app_lang", langCode) }
+        _currentLanguage.value = langCode
     }
 
     fun toggleSystemState() {
