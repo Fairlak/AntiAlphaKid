@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AntiAlphaKid"
+rootProject.name = "Alpha Control"
 include(":app")
  

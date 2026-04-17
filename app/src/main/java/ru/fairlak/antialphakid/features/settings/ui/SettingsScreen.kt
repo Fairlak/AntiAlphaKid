@@ -358,6 +358,19 @@ fun ThemeEngineModule(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val getColorName = @Composable { key: String ->
+        when (key) {
+            "GREEN" -> context.txt(R.string.color_green)
+            "RED" -> context.txt(R.string.color_red)
+            "BLUE" -> context.txt(R.string.color_blue)
+            "AMBER" -> context.txt(R.string.color_amber)
+            "WHITE" -> context.txt(R.string.color_white)
+            "VIOLET" -> context.txt(R.string.color_violet)
+            "YELLOW" -> context.txt(R.string.color_yellow)
+            else -> key
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -384,7 +397,7 @@ fun ThemeEngineModule(
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "MODE 'ON'  COLOR: [ < $onColorKey > ]",
+                text = "${context.txt(R.string.mode_on_color_title)} [ < ${getColorName(onColorKey)} > ]",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 style = TextStyle(
@@ -394,7 +407,7 @@ fun ThemeEngineModule(
             )
             Spacer(modifier = Modifier.height(15.dp))
             Text(
-                text = "MODE 'OFF' COLOR: [ < $offColorKey > ]",
+                text = "${context.txt(R.string.mode_off_color_title)} [ < ${getColorName(offColorKey)} > ]",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 style = TextStyle(
@@ -661,7 +674,17 @@ fun ThemePaletteDialog(
     var selectedOff by remember { mutableStateOf(currentOffKey) }
     var isEditingOn by remember { mutableStateOf(true) }
     val context = LocalContext.current
-    val colorOptions = listOf("GREEN", "RED", "BLUE", "AMBER", "WHITE", "VIOLET", "YELLOW")
+    val colorOptions = remember {
+        listOf(
+            "GREEN" to R.string.color_green,
+            "RED" to R.string.color_red,
+            "BLUE" to R.string.color_blue,
+            "AMBER" to R.string.color_amber,
+            "WHITE" to R.string.color_white,
+            "VIOLET" to R.string.color_violet,
+            "YELLOW" to R.string.color_yellow
+        )
+    }
     val infiniteTransition = rememberInfiniteTransition(label = "Blink")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -756,15 +779,16 @@ fun ThemePaletteDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            colorOptions.forEach { key ->
+            colorOptions.forEach { (key, nameRes) ->
                 val isActive = if (isEditingOn) selectedOn == key else selectedOff == key
+                val colorName = context.txt(nameRes)
+
                 Text(
                     text = if (isActive)
-                        "> $key ${context.txt(R.string.selected)}"
+                        "> $colorName ${context.txt(R.string.selected_color)}"
                     else
-                        "  $key",
+                        "  $colorName",
                     color = if (isActive) activeColor else activeColor.copy(alpha = 0.4f),
-                    fontFamily = FontFamily.Monospace,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
@@ -774,6 +798,7 @@ fun ThemePaletteDialog(
                             if (isEditingOn) selectedOn = key else selectedOff = key
                         }
                         .padding(vertical = 6.dp),
+                    fontFamily = FontFamily.Monospace,
                     style = TextStyle(
                         fontSize = 17.sp,
                         shadow = if (isActive) Shadow(activeColor, blurRadius = 10f) else null

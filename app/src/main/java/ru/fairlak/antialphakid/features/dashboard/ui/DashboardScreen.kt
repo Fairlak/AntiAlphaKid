@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -219,7 +220,7 @@ fun DashboardContent(
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            text = "> Anti Alpha",
+                            text = "> Alpha Control",
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -249,9 +250,10 @@ fun DashboardContent(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
                         style = TextStyle(
-                            fontSize = 18.sp,
+                            fontSize = dimensionResource(R.dimen.dashboard_settings_font).value.sp,
                             shadow = Shadow(color = activeColor, blurRadius = 15f)
                         ),
+                        maxLines = 1,
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -262,11 +264,11 @@ fun DashboardContent(
 
                     Text(
                         text = buildAnnotatedString {
-                            append("> SYSTEM_MODE: ")
-                            val stateText = if (isSystemActive) "ON" else "OFF"
+                            append(context.txt(R.string.system_mode))
+                            val stateText = if (isSystemActive) context.txt(R.string.on) else context.txt(R.string.off)
 
                             withStyle(style = SpanStyle(color = activeColor.copy(alpha = alpha))) {
-                                append(">> ")
+                                append(" >> ")
                             }
                             withStyle(style = SpanStyle(color = activeColor)) {
                                 append(stateText)
@@ -279,9 +281,11 @@ fun DashboardContent(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
                         style = TextStyle(
-                            fontSize = 16.sp,
+                            fontSize = dimensionResource(R.dimen.dashboard_system_mode_font).value.sp,
                             shadow = Shadow(color = activeColor, blurRadius = 15f)
                         ),
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -308,7 +312,7 @@ fun DashboardContent(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Application limits",
+                text = context.txt(R.string.application_limits),
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 style = TextStyle(
@@ -326,7 +330,7 @@ fun DashboardContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "The list is empty. Add a limit.",
+                        text = context.txt(R.string.list_empty),
                         color = activeColor,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 18.sp,
@@ -386,6 +390,7 @@ fun AppLimitItem(
 ) {
     val usedMin = usedMs / 1000 / 60
     val infiniteTransition = rememberInfiniteTransition(label = "BorderBlink")
+    val context = LocalContext.current
     val borderAlpha by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 0.1f,
@@ -442,7 +447,7 @@ fun AppLimitItem(
                 )
 
                 Text(
-                    text = getTerminalProgressBar(usedMs, minutes),
+                    text = getTerminalProgressBar(context,usedMs, minutes),
                     color = activeColor,
                     style = TextStyle(
                         fontSize = 15.sp,
@@ -453,7 +458,7 @@ fun AppLimitItem(
                 )
             }
             Icon(
-                painter = painterResource(id = ru.fairlak.antialphakid.R.drawable.ic_trash),
+                painter = painterResource(id = R.drawable.ic_trash),
                 contentDescription = "Удалить",
                 tint = activeColor,
                 modifier = Modifier
@@ -482,6 +487,7 @@ fun AppSelectionDialog(
     onDismiss: () -> Unit,
     activeColor: Color,
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
@@ -500,7 +506,7 @@ fun AppSelectionDialog(
                     .padding(top = 0.dp, start = 0.dp, end = 0.dp, bottom = 0.dp)
             ) {
                 Text(
-                    text = "Select an application",
+                    text = context.txt(R.string.select_aplic_title),
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     style = TextStyle(
@@ -518,7 +524,7 @@ fun AppSelectionDialog(
                         onSearchChange(it)
                     },
                     activeColor = activeColor,
-                    placeholder = "Search...",
+                    placeholder = context.txt(R.string.search_text),
                     onlyNumbers = false
                 )
 
@@ -578,7 +584,7 @@ fun AppSelectionDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TerminalButton(
-                        text = "[ CANCEL ]",
+                        text = context.txt(R.string.cancel_button),
                         activeColor = activeColor,
                         onClick = onDismiss
                     )
@@ -594,6 +600,7 @@ fun AddNewModuleItem(
     onClick: () -> Unit,
     activeColor: Color
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -614,7 +621,7 @@ fun AddNewModuleItem(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "[ + ADD_NEW_MODULE ]",
+                text = context.txt(R.string.add_new_module),
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -638,6 +645,7 @@ fun EditLimitDialog(
     activeColor: Color
 ) {
     var textValue by remember { mutableStateOf(currentLimit.toString()) }
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -649,7 +657,7 @@ fun EditLimitDialog(
         shape = RectangleShape,
         title = {
             Text(
-                text = "> EDIT: $appName",
+                text = "${context.txt(R.string.edit_title)} $appName",
                 color = activeColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -662,7 +670,7 @@ fun EditLimitDialog(
         text = {
             Column {
                 Text(
-                    text = "Enter new limit (min):",
+                    text = context.txt(R.string.enter_limit),
                     color = activeColor,
                     fontFamily = FontFamily.Monospace,
                     style = TextStyle(
@@ -682,7 +690,7 @@ fun EditLimitDialog(
         },
         confirmButton = {
             TerminalButton(
-                text = "[ SAVE ]",
+                text = context.txt(R.string.save_dash),
                 activeColor = activeColor,
                 onClick = {
                     val newLimit = textValue.toIntOrNull() ?: 30
@@ -697,7 +705,7 @@ fun EditLimitDialog(
                     shape = RectangleShape
                 ) {
                     Text(
-                        "CANCEL",
+                        context.txt(R.string.cancel_button),
                         color = activeColor.copy(alpha = 0.7f),
                         fontFamily = FontFamily.Monospace,
                         style = TextStyle(
@@ -729,13 +737,19 @@ fun PermissionRequiredScreen(onSafeClick: () -> Unit) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val headerText = if (!hasUsage) "> SYSTEM ERROR: ACCESS_DENIED" else "> SYSTEM WARNING: OVERLAY_REQUIRED"
+    val headerText = if (!hasUsage)
+        context.txt(R.string.system_error_acces)
+    else
+        context.txt(R.string.system_error_overlay)
     val descriptionText = if (!hasUsage) {
-        "Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыто ваше приложение."
+        context.txt(R.string.error_acces_text)
     } else {
-        "Доступ к статистике получен. Теперь необходимо разрешить наложение поверх окон, чтобы система могла блокировать экран."
+        context.txt(R.string.error_overlay_text)
     }
-    val buttonText = if (!hasUsage) "[ ПРЕДОСТАВИТЬ ДОСТУП ]" else "[ РАЗРЕШИТЬ НАЛОЖЕНИЕ ]"
+    val buttonText = if (!hasUsage)
+        context.txt(R.string.grant_access)
+    else
+        context.txt(R.string.allow_overlap)
 
     var showDescription by remember(headerText) { mutableStateOf(false) }
     var showButton by remember(headerText) { mutableStateOf(false) }
@@ -836,9 +850,10 @@ fun AppLockScreen(
     var passwordInput by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var showInput by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    val headerText = "> SECURITY_CHECK: DATABASE_ENCRYPTED"
-    val subText = "Enter the access key to initialize the management interface..."
+    val headerText = context.txt(R.string.security_title)
+    val subText = context.txt(R.string.security_text)
 
     Box(
         modifier = Modifier
@@ -889,12 +904,12 @@ fun AppLockScreen(
                     },
                     activeColor = if (isError) TerminalRed else activeColor,
                     isPassword = true,
-                    placeholder = "PASSWORD_REQUIRED_"
+                    placeholder = context.txt(R.string.password_text)
                 )
 
                 if (isError) {
                     Text(
-                        text = "!! ACCESS_DENIED: INVALID_KEY !!",
+                        text = context.txt(R.string.access_denied),
                         color = TerminalRed,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.padding(top = 8.dp),
@@ -924,7 +939,7 @@ fun AppLockScreen(
                             .height(50.dp)
                     ) {
                         Text(
-                            text = "[ INITIALIZE_LOGIN ]",
+                            text = context.txt(R.string.initialize_button),
                             color = activeColor,
                             fontFamily = FontFamily.Monospace,
                             style = TextStyle(
@@ -994,7 +1009,7 @@ fun hasOverlayPermission(context: Context): Boolean {
     } else true
 }
 
-fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
+fun getTerminalProgressBar(context: Context, currentMs: Long, limitMinutes: Int): String {
     val currentMinutes = (currentMs / 1000 / 60).toInt()
     val totalBars = 10
 
@@ -1007,8 +1022,9 @@ fun getTerminalProgressBar(currentMs: Long, limitMinutes: Int): String {
 
     val filled = "#".repeat(progress)
     val empty = "-".repeat(totalBars - progress)
+    val minLabel = context.txt(R.string.min)
 
-    return "[$filled$empty] $currentMinutes/$limitMinutes MIN"
+    return "[$filled$empty] $currentMinutes/$limitMinutes $minLabel"
 }
 
 fun getTerminalColorMatrix(targetColor: Color): ColorMatrix {

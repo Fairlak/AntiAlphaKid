@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Anti Alpha</string>
+    <string name="app_name">Alpha Control</string>
 
     <string name="settings_button">[ НАСТРОЙКИ ]</string>
     <string name="system_mode">> РЕЖИМ_СИСТ: </string>
@@ -27,14 +27,45 @@
     <string name="theme_setup">> ВЫБОР_ЦВЕТОВОЙ_ТЕМЫ</string>
     <string name="select_active_color">[ ВЫБЕРИТЕ_ЦВЕТ_АКТИВ_РЕЖИМА ]</string>
     <string name="select_inactive_color">[ ВЫБЕРИТЕ_ЦВЕТ_НЕАКТИВ_РЕЖИМА ]</string>
-    <string name="selected">(Выбрано)</string>
+    <string name="selected_color">(Выбрано)</string>
     <string name="save_an_exit">[ СОХРАНИТЬ И ВЫЙТИ ]</string>
+    <string name="color_green">ЗЕЛЁНЫЙ</string>
+    <string name="color_red">КРАСНЫЙ</string>
+    <string name="color_blue">СИНИЙ</string>
+    <string name="color_amber">ОРАНЖЕВЫЙ</string>
+    <string name="color_white">БЕЛЫЙ</string>
+    <string name="color_violet">ФИОЛЕТОВЫЙ</string>
+    <string name="color_yellow">ЖЁЛТЫЙ</string>
+    <string name="mode_on_color_title">"РЕЖИМ 'ВКЛ': "</string>
+    <string name="mode_off_color_title">"РЕЖИМ 'ВЫКЛ':"</string>
+    <string name="list_empty">Список пуст. Добавьте ограничение.</string>
+    <string name="application_limits">Ограничения приложений</string>
+    <string name="add_new_module">[ + ДОБАВИТЬ_НОВЫЙ_МОДУЛЬ ]</string>
+    <string name="select_aplic_title">Выберите приложение</string>
+    <string name="search_text">Поиск...</string>
+    <string name="edit_title">> РЕДАКТИРОВАТЬ: </string>
+    <string name="enter_limit">Введите новый лимит (мин):</string>
+    <string name="system_error_acces">> СИСТЕМНАЯ ОШИБКА: ДОСТУП_ЗАПРЕЩЕН</string>
+    <string name="system_error_overlay">> СИСТЕМНОЕ ПРЕДУПРЕЖДЕНИЕ: ТРЕБУЕТСЯ НАЛОЖЕНИЕ</string>
+    <string name="error_acces_text">"Для работы мониторинга требуется доступ к статистике использования. Без этого система не узнает, когда открыто ваше приложение."</string>
+    <string name="error_overlay_text">"Доступ к статистике получен. Теперь необходимо разрешить наложение поверх окон, чтобы система могла блокировать экран."</string>
+    <string name="grant_access">"[ ПРЕДОСТАВИТЬ ДОСТУП ]"</string>
+    <string name="allow_overlap">"[ РАЗРЕШИТЬ НАЛОЖЕНИЕ ]"</string>
+    <string name="security_title">"> ПРОВЕРКА БЕЗОПАСНОСТИ: ЗАШИФРОВАННАЯ БАЗА ДАННЫХ"</string>
+    <string name="security_text">"Введите ключ доступа для инициализации интерфейса управления..."</string>
+    <string name="password_text">"ТРЕБУЕТСЯ_ПАРОЛЬ"</string>
+    <string name="initialize_button">"[ ИНИЦИАЛИЗАЦИЯ_ВХОДА ]"</string>
+    <string name="min">МИН</string>
+    <string name="close_button">"[ ЗАКРЫТЬ ]"</string>
+
 
     <string name="language_setting">> ВЫБРАННЫЙ_ЯЗЫК: </string>
     <string name="select_language_title">> ВЫБОР ЯЗЫКА</string>
     <string name="lang_ru">РУССКИЙ</string>
     <string name="lang_en">АНГЛИЙСКИЙ</string>
     <string name="save_button">[ СОХРАНИТЬ ]</string>
+    <string name="save_dash">[ СОХРАН ]</string>
+
 
     <string name="default_blocker_text"> ЛИМИТ ИСЧЕРПАН </string>
 </resources>

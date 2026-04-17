@@ -8,6 +8,9 @@ import android.content.Intent
 import android.os.Build
 import android.text.StaticLayout
 import android.text.TextPaint
+import androidx.compose.ui.platform.LocalContext
+import ru.fairlak.antialphakid.R
+import ru.fairlak.antialphakid.core.common.txt
 import java.util.*
 
 class BlockerManager(private val context: Context) {
@@ -126,7 +129,12 @@ class BlockerManager(private val context: Context) {
 
         private fun drawOverlayText(canvas: Canvas) {
             val prefs = context.getSharedPreferences("anti_alpha_prefs", Context.MODE_PRIVATE)
-            val customText = prefs.getString("blocker_text", "ЛИМИТ ИСЧЕРПАН") ?: "ЛИМИТ ИСЧЕРПАН"
+            val customText = prefs.getString("blocker_text", "")
+            val displayText = if (!customText.isNullOrBlank()) {
+                customText
+            } else {
+                context.txt(R.string.default_blocker_text)
+            }
 
             val textPaint = TextPaint().apply {
                 color = Color.GREEN
@@ -139,7 +147,7 @@ class BlockerManager(private val context: Context) {
 
             val maxWidth = (width * 0.8f).toInt()
 
-            val staticLayout = StaticLayout.Builder.obtain(customText, 0, customText.length, textPaint, maxWidth)
+            val staticLayout = StaticLayout.Builder.obtain(displayText, 0, displayText.length, textPaint, maxWidth)
                 .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
                 .setLineSpacing(0f, 1.2f)
                 .build()
@@ -159,7 +167,7 @@ class BlockerManager(private val context: Context) {
                 alpha = 200
             }
             canvas.drawText(
-                "[ CLOSE ]",
+                context.txt(R.string.cancel_button),
                 width / 2f,
                 height / 2f + (staticLayout.height / 2f) + 200f,
                 buttonPaint

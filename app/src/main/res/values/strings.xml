@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Anti Alpha</string>
+    <string name="app_name">Alpha Control</string>
 
     <string name="settings_button">[ SETTINGS ]</string>
     <string name="system_mode">> SYSTEM_MODE: </string>
@@ -27,8 +27,36 @@
     <string name="theme_setup">> THEME_PALETTE_SETUP</string>
     <string name="select_active_color">[ SELECT_COLOR_FOR_ACTIVE ]</string>
     <string name="select_inactive_color">[ SELECT_COLOR_FOR_INACTIVE ]</string>
-    <string name="selected">(Selected)</string>
+    <string name="selected_color">(Selected)</string>
     <string name="save_an_exit">[ SAVE_AND_EXIT ]</string>
+    <string name="color_green">GREEN</string>
+    <string name="color_red">RED</string>
+    <string name="color_blue">BLUE</string>
+    <string name="color_amber">AMBER</string>
+    <string name="color_white">WHITE</string>
+    <string name="color_violet">VIOLET</string>
+    <string name="color_yellow">YELLOW</string>
+    <string name="mode_on_color_title">"MODE 'ON'  COLOR:"</string>
+    <string name="mode_off_color_title">"MODE 'OFF' COLOR:"</string>
+    <string name="list_empty">The list is empty. Add a limit.</string>
+    <string name="application_limits">Application limits</string>
+    <string name="add_new_module">[ + ADD_NEW_MODULE ]</string>
+    <string name="select_aplic_title">Select an application</string>
+    <string name="search_text">Search...</string>
+    <string name="edit_title">> EDIT: </string>
+    <string name="enter_limit">Enter new limit (min):</string>
+    <string name="system_error_acces">> SYSTEM ERROR: ACCESS_DENIED</string>
+    <string name="system_error_overlay">> SYSTEM WARNING: OVERLAY_REQUIRED</string>
+    <string name="error_acces_text">"Monitoring requires access to usage statistics. Without it, the system won't know when your app is open."</string>
+    <string name="error_overlay_text">"Access to statistics has been granted. Now you need to enable overlays so the system can lock the screen."</string>
+    <string name="grant_access">"[ GRANT ACCESS ]"</string>
+    <string name="allow_overlap">"[ ALLOW OVERLAP ]"</string>
+    <string name="security_title">"> SECURITY_CHECK: DATABASE_ENCRYPTED"</string>
+    <string name="security_text">"Enter the access key to initialize the management interface..."</string>
+    <string name="password_text">"PASSWORD_REQUIRED"</string>
+    <string name="initialize_button">"[ INITIALIZE_LOGIN ]"</string>
+    <string name="min">MIN</string>
+    <string name="close_button">"[ CLOSE ]"</string>
 
 
 
@@ -37,6 +65,8 @@
     <string name="lang_ru">RUSSIAN</string>
     <string name="lang_en">ENGLISH</string>
     <string name="save_button">[ SAVE ]</string>
+    <string name="save_dash">[ SAVE ]</string>
+
 
     <string name="default_blocker_text"> LIMIT EXCEEDED </string>
 

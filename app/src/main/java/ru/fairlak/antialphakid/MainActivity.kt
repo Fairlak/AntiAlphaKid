@@ -105,7 +105,12 @@ class MainActivity : ComponentActivity() {
         }
     }
     override fun attachBaseContext(newBase: Context) {
-        val context = ru.fairlak.antialphakid.core.common.LocaleHelper.wrapContext(newBase)
-        super.attachBaseContext(context)
+        val localizedContext = ru.fairlak.antialphakid.core.common.LocaleHelper.wrapContext(newBase)
+
+        val config = localizedContext.resources.configuration
+        config.fontScale = 1.0f
+
+        val finalContext = localizedContext.createConfigurationContext(config)
+        super.attachBaseContext(finalContext)
     }
 }
