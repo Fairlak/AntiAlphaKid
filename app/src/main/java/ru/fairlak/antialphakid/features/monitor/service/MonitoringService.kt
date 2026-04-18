@@ -13,6 +13,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import ru.fairlak.antialphakid.R
+import ru.fairlak.antialphakid.core.common.LocaleHelper
+import ru.fairlak.antialphakid.core.common.txt
 import ru.fairlak.antialphakid.core.database.AppDatabase
 import ru.fairlak.antialphakid.core.database.AppUsageEntity
 import ru.fairlak.antialphakid.features.blocker.BlockerManager
@@ -29,6 +32,9 @@ class MonitoringService : Service() {
     private var lastNotifiedPackage: String? = null
     private var hasShownWarning = false
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -90,9 +96,6 @@ class MonitoringService : Service() {
                                     currentApp
                                 }
 
-                                Log.d("AntiAlphaDebug", "Сейчас открыто: $truAppName | Время: $appMinutes мин. | Лимит: $limit")
-
-
                                 if (timeLeft in 1..5 && !hasShownWarning && notificationsEnabled) {
                                     showWarningNotification(truAppName, timeLeft.toInt())
                                     hasShownWarning = true
@@ -105,10 +108,11 @@ class MonitoringService : Service() {
                                 }
 
                                 val notification = NotificationCompat.Builder(this@MonitoringService, CHANNEL_SILENT)
-                                    .setContentTitle("Лимит: $limit мин.")
-                                    .setContentText("Использовано $truAppName: $appMinutes мин.")
+                                    .setContentTitle(getString(R.string.notif_limit_title, limit))
+                                    .setContentText(getString(R.string.notif_usage_text, truAppName, appMinutes))
                                     .setSmallIcon(androidx.core.R.drawable.notification_bg)
                                     .setSilent(true)
+                                    .setContentIntent(getPendingIntent())
                                     .build()
                                 notificationManager.notify(1, notification)
                             } else {
@@ -120,7 +124,7 @@ class MonitoringService : Service() {
 
                     }
                 } catch (e: Exception) {
-                    Log.e("AntiAlphaDebug", "Ошибка: ${e.message}")
+                    Log.e("AntiAlphaDebug", "Error: ${e.message}")
                 }
                 delay(5000)
             }
@@ -129,12 +133,13 @@ class MonitoringService : Service() {
 
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_SILENT)
-            .setContentTitle("Анти-скролл работает")
-            .setContentText("Система активна")
+            .setContentTitle(txt(R.string.notif_silent_title))
+            .setContentText(txt(R.string.notif_silent_text))
             .setSmallIcon(androidx.core.R.drawable.notification_bg)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setSilent(true)
+            .setContentIntent(getPendingIntent())
             .build()
     }
 
@@ -172,12 +177,13 @@ class MonitoringService : Service() {
 
         val warningNotification = NotificationCompat.Builder(this, CHANNEL_WARNING)
             .setSmallIcon(androidx.core.R.drawable.notification_bg)
-            .setContentTitle("Внимание: $appName")
-            .setContentText("Осталось всего $minutesLeft мин. до блокировки!")
+            .setContentTitle(getString(R.string.notif_warning_title, appName))
+            .setContentText(getString(R.string.notif_warning_text, minutesLeft))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(Notification.DEFAULT_ALL)
             .setVibrate(longArrayOf(0, 500, 200, 500))
             .setAutoCancel(true)
+            .setContentIntent(getPendingIntent())
             .build()
 
         notificationManager.notify(2, warningNotification)
@@ -193,5 +199,15 @@ class MonitoringService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+    }
+
+    private fun getPendingIntent(): android.app.PendingIntent {
+        val intent = Intent(this, ru.fairlak.antialphakid.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val flags = android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+
+        return android.app.PendingIntent.getActivity(this, 0, intent, flags)
     }
 }

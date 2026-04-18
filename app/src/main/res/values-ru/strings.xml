@@ -57,7 +57,12 @@
     <string name="initialize_button">"[ ИНИЦИАЛИЗАЦИЯ_ВХОДА ]"</string>
     <string name="min">МИН</string>
     <string name="close_button">"[ ЗАКРЫТЬ ]"</string>
-
+    <string name="notif_limit_title">Лимит: %1$d мин.</string>
+    <string name="notif_usage_text">Использовано %1$s: %2$d мин.</string>
+    <string name="notif_warning_title">Внимание: %1$s</string>
+    <string name="notif_warning_text">Осталось всего %1$d мин. до блокировки!</string>
+    <string name="notif_silent_title">Анти-скролл работает</string>
+    <string name="notif_silent_text">Система активна</string>
 
     <string name="language_setting">> ВЫБРАННЫЙ_ЯЗЫК: </string>
     <string name="select_language_title">> ВЫБОР ЯЗЫКА</string>

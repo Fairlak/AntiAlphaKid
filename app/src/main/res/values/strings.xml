@@ -57,6 +57,12 @@
     <string name="initialize_button">"[ INITIALIZE_LOGIN ]"</string>
     <string name="min">MIN</string>
     <string name="close_button">"[ CLOSE ]"</string>
+    <string name="notif_limit_title">Limit: %1$d min.</string>
+    <string name="notif_usage_text">Used %1$s: %2$d min.</string>
+    <string name="notif_warning_title">Warning: %1$s</string>
+    <string name="notif_warning_text">Only %1$d min. left until block!</string>
+    <string name="notif_silent_title">Anti-scroll is working</string>
+    <string name="notif_silent_text">System active</string>
 
 
 

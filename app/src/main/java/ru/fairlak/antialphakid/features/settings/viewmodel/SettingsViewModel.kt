@@ -111,6 +111,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setLanguage(langCode: String) {
         prefs.edit { putString("app_lang", langCode) }
         _currentLanguage.value = langCode
+        val intent = Intent(getApplication(), MonitoringService::class.java)
+        getApplication<Application>().stopService(intent)
+
+        if (_isSystemActive.value) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                getApplication<Application>().startForegroundService(intent)
+            } else {
+                getApplication<Application>().startService(intent)
+            }
+        }
     }
 
     fun toggleSystemState() {
